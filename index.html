@@ -15,7 +15,6 @@
       --ok:#2ecc71;
       --chip:#1a2440;
 
-      /* badge colors */
       --badgeBlue:#1f6feb;   /* Back Half Days */
       --badgeTeal:#0ea5a5;   /* Shift Pattern Co-Host */
       --rolePurple:#7c3aed;  /* Role badge */
@@ -270,7 +269,7 @@
       z-index:50;
     }
     .modal{
-      width:min(720px, 100%);
+      width:min(760px, 100%);
       background: linear-gradient(180deg, rgba(16,26,46,.98), rgba(14,23,42,.98));
       border:1px solid var(--border);
       border-radius:18px;
@@ -378,7 +377,7 @@
     </div>
 
     <div class="controls">
-      <input id="search" class="grow" placeholder="Search associate name, login, or role…" />
+      <input id="search" class="grow" placeholder="Search associate name, login, role, or badge…" />
       <button id="btnAdd">+ Add Associate</button>
       <button id="btnClear" class="dangerBtn" title="Clears board data on this device">Clear Board</button>
     </div>
@@ -409,34 +408,16 @@
         </div>
       </div>
 
-      <div class="grid2">
-        <div>
-          <label for="selDept">Department</label>
-          <select id="selDept">
-            <option value="Inbound">Inbound</option>
-            <option value="Outbound">Outbound</option>
-            <option value="Demora">Demora</option>
-          </select>
-        </div>
-        <div>
-          <label for="selRole">Role / Path (badge)</label>
-          <select id="selRole">
-            <option value="">None</option>
-            <option value="Problem Solver">Problem Solver</option>
-            <option value="Picker">Picker</option>
-            <option value="Stower">Stower</option>
-            <option value="Process Guide - Pick">Process Guide - Pick</option>
-            <option value="Process Guide - Stow">Process Guide - Stow</option>
-            <option value="Decanter">Decanter</option>
-            <option value="Pick Transporter">Pick Transporter</option>
-            <option value="Stow Transporter">Stow Transporter</option>
-            <option value="WaterSpider">WaterSpider</option>
-            <option value="ICQA">ICQA</option>
-          </select>
-        </div>
+      <div>
+        <label for="selDept">Department</label>
+        <select id="selDept">
+          <option value="Inbound">Inbound</option>
+          <option value="Outbound">Outbound</option>
+          <option value="Demora">Demora</option>
+        </select>
       </div>
 
-      <!-- NEW: Multi-select badges -->
+      <!-- Shift badges (multi-select) -->
       <div>
         <label>Badges</label>
         <div class="checks">
@@ -449,6 +430,23 @@
             <input id="chkCOHOST" type="checkbox" />
             <span>Shift Pattern Co-Host</span>
           </label>
+        </div>
+      </div>
+
+      <!-- Role/Path (multi-select) -->
+      <div>
+        <label>Role / Path (multi-select)</label>
+        <div class="checks">
+          <label class="check"><input id="rProblemSolver" type="checkbox" /><span>Problem Solver</span></label>
+          <label class="check"><input id="rPicker" type="checkbox" /><span>Picker</span></label>
+          <label class="check"><input id="rStower" type="checkbox" /><span>Stower</span></label>
+          <label class="check"><input id="rPGPick" type="checkbox" /><span>Process Guide - Pick</span></label>
+          <label class="check"><input id="rPGStow" type="checkbox" /><span>Process Guide - Stow</span></label>
+          <label class="check"><input id="rDecanter" type="checkbox" /><span>Decanter</span></label>
+          <label class="check"><input id="rPickTransporter" type="checkbox" /><span>Pick Transporter</span></label>
+          <label class="check"><input id="rStowTransporter" type="checkbox" /><span>Stow Transporter</span></label>
+          <label class="check"><input id="rWaterSpider" type="checkbox" /><span>WaterSpider</span></label>
+          <label class="check"><input id="rICQA" type="checkbox" /><span>ICQA</span></label>
         </div>
       </div>
 
@@ -507,14 +505,27 @@
 
 <script>
 (() => {
-  const STORAGE_KEY = "staffing_whiteboard_v4";
+  const STORAGE_KEY = "staffing_whiteboard_v5";
   const LOGIN_KEY = "staffing_whiteboard_login_v1";
   const TARGETS_KEY = "staffing_whiteboard_targets_v1";
 
   const departments = ["Inbound", "Outbound", "Demora"];
 
+  const ROLE_VALUES = [
+    "Problem Solver",
+    "Picker",
+    "Stower",
+    "Process Guide - Pick",
+    "Process Guide - Stow",
+    "Decanter",
+    "Pick Transporter",
+    "Stow Transporter",
+    "WaterSpider",
+    "ICQA"
+  ];
+
   /** State shape:
-   * { cards: [{id, name, login, dept, badges:[], role, photoDataUrl}], updatedAt }
+   * { cards: [{id, name, login, dept, badges:[], roles:[], photoDataUrl}], updatedAt }
    */
   const state = loadState();
 
@@ -543,18 +554,30 @@
   const inpName = document.getElementById("inpName");
   const inpLogin = document.getElementById("inpLogin");
   const selDept = document.getElementById("selDept");
-  const selRole = document.getElementById("selRole");
   const chkBHD = document.getElementById("chkBHD");
   const chkCOHOST = document.getElementById("chkCOHOST");
   const editId = document.getElementById("editId");
   const modalTitle = document.getElementById("modalTitle");
+
+  // Roles checkboxes
+  const roleCheckboxes = [
+    { id: "rProblemSolver", value: "Problem Solver" },
+    { id: "rPicker", value: "Picker" },
+    { id: "rStower", value: "Stower" },
+    { id: "rPGPick", value: "Process Guide - Pick" },
+    { id: "rPGStow", value: "Process Guide - Stow" },
+    { id: "rDecanter", value: "Decanter" },
+    { id: "rPickTransporter", value: "Pick Transporter" },
+    { id: "rStowTransporter", value: "Stow Transporter" },
+    { id: "rWaterSpider", value: "WaterSpider" },
+    { id: "rICQA", value: "ICQA" },
+  ].map(r => ({ ...r, el: document.getElementById(r.id) }));
 
   // Photo upload
   const inpPhoto = document.getElementById("inpPhoto");
   const btnRemovePhoto = document.getElementById("btnRemovePhoto");
   const photoImg = document.getElementById("photoImg");
   const photoInitial = document.getElementById("photoInitial");
-
   let modalPhotoDataUrl = "";
 
   // Login modal
@@ -677,10 +700,11 @@
         .filter(c => {
           if (!q) return true;
           const badgesText = (c.badges || []).join(" ").toLowerCase();
+          const rolesText = (c.roles || []).join(" ").toLowerCase();
           return (c.name || "").toLowerCase().includes(q)
               || (c.login || "").toLowerCase().includes(q)
-              || (c.role || "").toLowerCase().includes(q)
-              || badgesText.includes(q);
+              || badgesText.includes(q)
+              || rolesText.includes(q);
         });
 
       for (const c of cards) zone.appendChild(renderCard(c, q));
@@ -690,53 +714,25 @@
     }
   }
 
-  function renderBadgeChip(code, c){
-    // Optional photo on chip
-    const withAvatar = !!c.photoDataUrl;
+  function chipWithAvatar(baseClass, label, c){
+    const chip = document.createElement("span");
+    chip.className = "chip " + baseClass;
 
-    if (code === "BHD") {
-      const chip = document.createElement("span");
-      chip.className = "chip blue";
-
-      if (withAvatar) {
-        const bav = document.createElement("span");
-        bav.className = "badgeAvatar";
-        const bi = document.createElement("img");
-        bi.src = c.photoDataUrl;
-        bi.alt = "";
-        bav.appendChild(bi);
-        chip.appendChild(bav);
-      }
-
-      const txt = document.createElement("span");
-      txt.className = "clip";
-      txt.textContent = "Back Half Days";
-      chip.appendChild(txt);
-      return chip;
+    if (c.photoDataUrl) {
+      const bav = document.createElement("span");
+      bav.className = "badgeAvatar";
+      const bi = document.createElement("img");
+      bi.src = c.photoDataUrl;
+      bi.alt = "";
+      bav.appendChild(bi);
+      chip.appendChild(bav);
     }
 
-    if (code === "COHOST") {
-      const chip = document.createElement("span");
-      chip.className = "chip teal";
-
-      if (withAvatar) {
-        const bav = document.createElement("span");
-        bav.className = "badgeAvatar";
-        const bi = document.createElement("img");
-        bi.src = c.photoDataUrl;
-        bi.alt = "";
-        bav.appendChild(bi);
-        chip.appendChild(bav);
-      }
-
-      const txt = document.createElement("span");
-      txt.className = "clip";
-      txt.textContent = "Shift Pattern Co-Host";
-      chip.appendChild(txt);
-      return chip;
-    }
-
-    return null;
+    const txt = document.createElement("span");
+    txt.className = "clip";
+    txt.textContent = label;
+    chip.appendChild(txt);
+    return chip;
   }
 
   function renderCard(c, searching) {
@@ -796,34 +792,17 @@
     const chips = document.createElement("div");
     chips.className = "chips";
 
-    // Badges (multi)
+    // badges
     const badges = Array.isArray(c.badges) ? c.badges : [];
     for (const b of badges) {
-      const chip = renderBadgeChip(b, c);
-      if (chip) chips.appendChild(chip);
+      if (b === "BHD") chips.appendChild(chipWithAvatar("blue", "Back Half Days", c));
+      if (b === "COHOST") chips.appendChild(chipWithAvatar("teal", "Shift Pattern Co-Host", c));
     }
 
-    // Role/Path badge
-    if (c.role) {
-      const chip = document.createElement("span");
-      chip.className = "chip role";
-
-      if (c.photoDataUrl) {
-        const bav = document.createElement("span");
-        bav.className = "badgeAvatar";
-        const bi = document.createElement("img");
-        bi.src = c.photoDataUrl;
-        bi.alt = "";
-        bav.appendChild(bi);
-        chip.appendChild(bav);
-      }
-
-      const txt = document.createElement("span");
-      txt.className = "clip";
-      txt.textContent = c.role;
-      chip.appendChild(txt);
-
-      chips.appendChild(chip);
+    // roles (multi)
+    const roles = Array.isArray(c.roles) ? c.roles : [];
+    for (const r of roles) {
+      chips.appendChild(chipWithAvatar("role", r, c));
     }
 
     if (searching) {
@@ -847,7 +826,7 @@
       login: (data.login || "").trim(),
       dept: data.dept || "Inbound",
       badges: data.badges || [],
-      role: data.role || "",
+      roles: data.roles || [],
       photoDataUrl: data.photoDataUrl || ""
     });
     touch();
@@ -857,4 +836,258 @@
     const i = state.cards.findIndex(c => c.id === id);
     if (i === -1) return;
     state.cards[i] = {
-      ...state.cards
+      ...state.cards[i],
+      name: (data.name || "").trim(),
+      login: (data.login || "").trim(),
+      dept: data.dept || state.cards[i].dept,
+      badges: data.badges || [],
+      roles: data.roles || [],
+      photoDataUrl: data.photoDataUrl || ""
+    };
+    touch();
+  }
+
+  function deleteCard(id) {
+    const i = state.cards.findIndex(c => c.id === id);
+    if (i === -1) return;
+    state.cards.splice(i, 1);
+    touch();
+  }
+
+  function moveCard(id, newDept) {
+    const c = state.cards.find(x => x.id === id);
+    if (!c) return;
+    c.dept = newDept;
+    touch();
+  }
+
+  function touch() {
+    state.updatedAt = Date.now();
+    saveState(state);
+    render();
+  }
+
+  // Modal logic
+  function openModal(cardOrDefaults = {}) {
+    const isEdit = !!cardOrDefaults.id;
+    modalTitle.textContent = isEdit ? "Edit Associate" : "Add Associate";
+    btnDelete.style.display = isEdit ? "inline-flex" : "none";
+
+    editId.textContent = cardOrDefaults.id || "";
+    editId.style.display = "none";
+
+    inpName.value = cardOrDefaults.name || "";
+    inpLogin.value = cardOrDefaults.login || "";
+    selDept.value = cardOrDefaults.dept || "Inbound";
+
+    // badges
+    const b = Array.isArray(cardOrDefaults.badges) ? cardOrDefaults.badges : [];
+    chkBHD.checked = b.includes("BHD");
+    chkCOHOST.checked = b.includes("COHOST");
+
+    // roles
+    const roles = new Set(Array.isArray(cardOrDefaults.roles) ? cardOrDefaults.roles : []);
+    for (const r of roleCheckboxes) r.el.checked = roles.has(r.value);
+
+    // photo
+    modalPhotoDataUrl = cardOrDefaults.photoDataUrl || "";
+    inpPhoto.value = "";
+    syncPhotoPreview();
+
+    modalBack.style.display = "flex";
+    modalBack.setAttribute("aria-hidden", "false");
+    setTimeout(() => inpName.focus(), 0);
+  }
+
+  function closeModal() {
+    modalBack.style.display = "none";
+    modalBack.setAttribute("aria-hidden", "true");
+    modalPhotoDataUrl = "";
+    inpPhoto.value = "";
+  }
+
+  function syncPhotoPreview(){
+    const initial = (inpName.value || inpLogin.value || "?").trim().charAt(0).toUpperCase() || "?";
+    if (modalPhotoDataUrl) {
+      photoImg.src = modalPhotoDataUrl;
+      photoImg.style.display = "block";
+      photoInitial.style.display = "none";
+    } else {
+      photoImg.src = "";
+      photoImg.style.display = "none";
+      photoInitial.textContent = initial;
+      photoInitial.style.display = "block";
+    }
+  }
+
+  inpName.addEventListener("input", () => { if (!modalPhotoDataUrl) syncPhotoPreview(); });
+  inpLogin.addEventListener("input", () => { if (!modalPhotoDataUrl) syncPhotoPreview(); });
+
+  // Photo upload
+  inpPhoto.addEventListener("change", async () => {
+    const file = inpPhoto.files && inpPhoto.files[0];
+    if (!file) return;
+
+    const MAX_MB = 1.2;
+    if (file.size > MAX_MB * 1024 * 1024) {
+      alert("That image is a bit large. Please choose a smaller photo (about 1MB or less).");
+      inpPhoto.value = "";
+      return;
+    }
+
+    const dataUrl = await readFileAsDataURL(file);
+    modalPhotoDataUrl = dataUrl;
+    syncPhotoPreview();
+  });
+
+  btnRemovePhoto.addEventListener("click", () => {
+    modalPhotoDataUrl = "";
+    inpPhoto.value = "";
+    syncPhotoPreview();
+  });
+
+  function readFileAsDataURL(file){
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(String(r.result || ""));
+      r.onerror = () => reject(r.error);
+      r.readAsDataURL(file);
+    });
+  }
+
+  btnAdd.addEventListener("click", () => openModal({ dept:"Inbound" }));
+  btnCloseModal.addEventListener("click", closeModal);
+  modalBack.addEventListener("click", (e) => {
+    if (e.target === modalBack) closeModal();
+  });
+
+  btnSave.addEventListener("click", () => {
+    const badges = [];
+    if (chkBHD.checked) badges.push("BHD");
+    if (chkCOHOST.checked) badges.push("COHOST");
+
+    const roles = [];
+    for (const r of roleCheckboxes) if (r.el.checked) roles.push(r.value);
+
+    const data = {
+      name: inpName.value,
+      login: inpLogin.value,
+      dept: selDept.value,
+      badges,
+      roles,
+      photoDataUrl: modalPhotoDataUrl
+    };
+
+    const id = editId.textContent;
+    if (id) updateCard(id, data);
+    else addCard(data);
+
+    closeModal();
+  });
+
+  btnDelete.addEventListener("click", () => {
+    const id = editId.textContent;
+    if (!id) return;
+    deleteCard(id);
+    closeModal();
+  });
+
+  // Login modal logic
+  function openLogin() {
+    loadLogin();
+    loginBack.style.display = "flex";
+    loginBack.setAttribute("aria-hidden", "false");
+    setTimeout(() => inpManager.focus(), 0);
+  }
+  function closeLogin() {
+    loginBack.style.display = "none";
+    loginBack.setAttribute("aria-hidden", "true");
+  }
+  btnLogin.addEventListener("click", openLogin);
+  btnCloseLogin.addEventListener("click", closeLogin);
+  loginBack.addEventListener("click", (e) => {
+    if (e.target === loginBack) closeLogin();
+  });
+  btnSaveLogin.addEventListener("click", saveLogin);
+
+  // Search
+  let t = null;
+  searchEl.addEventListener("input", () => {
+    clearTimeout(t);
+    t = setTimeout(render, 80);
+  });
+
+  // Clear board
+  btnClear.addEventListener("click", () => {
+    const ok = confirm("Clear all associates from this board on this device?");
+    if (!ok) return;
+    state.cards = [];
+    touch();
+  });
+
+  // Persist + Back-compat
+  function loadState(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return { cards: [], updatedAt: Date.now() };
+      const parsed = JSON.parse(raw);
+      if (!parsed || !Array.isArray(parsed.cards)) return { cards: [], updatedAt: Date.now() };
+
+      parsed.cards = parsed.cards.map(c => {
+        // badges (older had `badge` string)
+        const badges = Array.isArray(c.badges) ? c.badges.slice() : [];
+        if (!badges.length && typeof c.badge === "string" && c.badge.trim()) badges.push(c.badge.trim());
+        const allowedBadges = new Set(["BHD","COHOST"]);
+        const cleanBadges = [...new Set(badges)].filter(x => allowedBadges.has(x));
+
+        // roles (older had `role` string)
+        let roles = Array.isArray(c.roles) ? c.roles.slice() : [];
+        if (!roles.length && typeof c.role === "string" && c.role.trim()) roles.push(c.role.trim());
+        const allowedRoles = new Set(ROLE_VALUES);
+        roles = [...new Set(roles)].filter(r => allowedRoles.has(r));
+
+        return {
+          id: c.id || crypto.randomUUID(),
+          name: c.name || "",
+          login: c.login || "",
+          dept: c.dept || "Inbound",
+          badges: cleanBadges,
+          roles,
+          photoDataUrl: c.photoDataUrl || ""
+        };
+      });
+
+      return { cards: parsed.cards, updatedAt: parsed.updatedAt || Date.now() };
+    }catch{
+      return { cards: [], updatedAt: Date.now() };
+    }
+  }
+  function saveState(s){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+  }
+
+  function loadTargets(){
+    try{
+      const raw = localStorage.getItem(TARGETS_KEY);
+      if (!raw) return { Inbound: 0, Outbound: 0, Demora: 0 };
+      const t = JSON.parse(raw);
+      return {
+        Inbound: Number(t.Inbound ?? 0),
+        Outbound: Number(t.Outbound ?? 0),
+        Demora: Number(t.Demora ?? 0),
+      };
+    }catch{
+      return { Inbound: 0, Outbound: 0, Demora: 0 };
+    }
+  }
+  function saveTargets(t){
+    localStorage.setItem(TARGETS_KEY, JSON.stringify(t));
+  }
+
+  // Initial render
+  render();
+
+})();
+</script>
+</body>
+</html>
