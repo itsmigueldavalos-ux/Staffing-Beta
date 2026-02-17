@@ -1,0 +1,978 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Staffing Digital Whiteboard</title>
+  <style>
+    :root{
+      --bg:#0b1220;
+      --panel:#101a2e;
+      --panel2:#0e172a;
+      --text:#e8eefc;
+      --muted:#a8b3cf;
+      --border:rgba(255,255,255,.10);
+      --shadow: 0 10px 25px rgba(0,0,0,.35);
+      --accent:#6ea8fe;
+      --danger:#ff5c5c;
+      --ok:#2ecc71;
+      --badgeBlue:#1f6feb;
+      --chip:#1a2440;
+      --warn:#f1c40f;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      background: radial-gradient(1200px 800px at 20% 10%, #16264b 0%, var(--bg) 55%);
+      color:var(--text);
+    }
+    header{
+      position:sticky; top:0; z-index:10;
+      background: linear-gradient(180deg, rgba(11,18,32,.98), rgba(11,18,32,.85));
+      backdrop-filter: blur(10px);
+      border-bottom:1px solid var(--border);
+    }
+    .wrap{max-width:1200px; margin:0 auto; padding:14px 16px;}
+    .topbar{display:flex; gap:12px; flex-wrap:wrap; align-items:center; justify-content:space-between;}
+    .brand{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;}
+    .brand h1{font-size:18px; margin:0; letter-spacing:.2px;}
+    .meta{display:flex; gap:12px; align-items:center; color:var(--muted); font-size:13px; flex-wrap:wrap;}
+    .pill{
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.03);
+      padding:6px 10px;
+      border-radius:999px;
+      display:inline-flex;
+      gap:8px;
+      align-items:center;
+      box-shadow: 0 1px 0 rgba(255,255,255,.05) inset;
+      flex-wrap:wrap;
+    }
+    .pill strong{color:var(--text)}
+    .controls{
+      display:flex; gap:10px; flex-wrap:wrap; align-items:center;
+      width:100%;
+      margin-top:10px;
+    }
+    input, select, button{
+      border-radius:12px;
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.03);
+      color:var(--text);
+      padding:10px 12px;
+      outline:none;
+    }
+    input::placeholder{color:rgba(232,238,252,.55)}
+    input:focus, select:focus{
+      border-color: rgba(110,168,254,.6);
+      box-shadow: 0 0 0 3px rgba(110,168,254,.18);
+    }
+    button{
+      cursor:pointer;
+      background: rgba(110,168,254,.14);
+      border-color: rgba(110,168,254,.35);
+      font-weight:600;
+    }
+    button:hover{background: rgba(110,168,254,.22)}
+    .dangerBtn{
+      background: rgba(255,92,92,.14);
+      border-color: rgba(255,92,92,.35);
+    }
+    .dangerBtn:hover{background: rgba(255,92,92,.22)}
+    .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
+    .grow{flex:1; min-width:220px;}
+
+    main{max-width:1200px; margin:0 auto; padding:16px;}
+    .board{
+      display:grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap:14px;
+    }
+    @media (max-width: 980px){
+      .board{grid-template-columns:1fr}
+    }
+    .col{
+      background: linear-gradient(180deg, rgba(16,26,46,.78), rgba(14,23,42,.78));
+      border:1px solid var(--border);
+      border-radius:18px;
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      min-height:360px;
+      display:flex;
+      flex-direction:column;
+    }
+    .colhead{
+      padding:12px 12px 10px;
+      border-bottom:1px solid var(--border);
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:10px;
+    }
+    .coltitle{display:flex; flex-direction:column; gap:6px;}
+    .coltitle strong{font-size:14px; letter-spacing:.2px;}
+    .colsub{
+      display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+      font-size:12px; color:var(--muted);
+    }
+
+    /* target indicator */
+    .indicator{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:4px 8px;
+      border-radius:999px;
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.03);
+      color: var(--text);
+    }
+    .dot{
+      width:10px; height:10px; border-radius:999px;
+      background: var(--danger);
+      box-shadow: 0 0 0 3px rgba(255,92,92,.14);
+    }
+    .dot.ok{
+      background: var(--ok);
+      box-shadow: 0 0 0 3px rgba(46,204,113,.14);
+    }
+    .targetInput{
+      width:86px;
+      padding:6px 8px;
+      border-radius:10px;
+      font-size:12px;
+    }
+
+    .dropzone{
+      padding:12px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      flex:1;
+    }
+    .dropzone.dragover{
+      outline:2px dashed rgba(110,168,254,.6);
+      outline-offset:-6px;
+      background: rgba(110,168,254,.07);
+    }
+
+    .card{
+      background: rgba(255,255,255,.04);
+      border:1px solid var(--border);
+      border-radius:16px;
+      padding:10px 10px 8px;
+      box-shadow: 0 2px 0 rgba(255,255,255,.04) inset;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+    .card[draggable="true"]{cursor:grab}
+    .card:active{cursor:grabbing}
+
+    .cardTop{
+      display:flex; align-items:flex-start; justify-content:space-between; gap:10px;
+    }
+    .leftRow{
+      display:flex; gap:10px; align-items:flex-start; min-width:0;
+      flex:1;
+    }
+    .avatar{
+      width:36px; height:36px;
+      border-radius:999px;
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.05);
+      overflow:hidden;
+      flex:0 0 auto;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight:800;
+      color: rgba(232,238,252,.75);
+    }
+    .avatar img{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      display:block;
+    }
+    .who{
+      display:flex; flex-direction:column; gap:2px;
+      min-width:0;
+      flex:1;
+    }
+    .name{
+      font-weight:700;
+      font-size:14px;
+      line-height:1.2;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .login{
+      font-size:12px;
+      color:var(--muted);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .chips{display:flex; gap:6px; flex-wrap:wrap; align-items:center;}
+    .chip{
+      font-size:11px;
+      padding:5px 8px;
+      border-radius:999px;
+      background: var(--chip);
+      border:1px solid var(--border);
+      color: var(--text);
+      display:inline-flex; align-items:center; gap:6px;
+    }
+    .chip.blue{
+      background: rgba(31,111,235,.18);
+      border-color: rgba(31,111,235,.45);
+      color: #dbeafe;
+    }
+    .badgeAvatar{
+      width:16px; height:16px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.25);
+      overflow:hidden;
+      background: rgba(255,255,255,.08);
+      display:inline-flex; align-items:center; justify-content:center;
+      flex:0 0 auto;
+    }
+    .badgeAvatar img{
+      width:100%; height:100%;
+      object-fit:cover;
+      display:block;
+    }
+
+    .miniBtn{
+      font-size:12px;
+      padding:6px 8px;
+      border-radius:10px;
+      background: rgba(255,255,255,.04);
+      border:1px solid var(--border);
+      color: var(--text);
+      cursor:pointer;
+    }
+    .miniBtn:hover{background: rgba(255,255,255,.07)}
+    .footerLine{
+      display:flex; align-items:center; justify-content:space-between;
+      color: var(--muted);
+      font-size:12px;
+      margin-top:4px;
+    }
+
+    /* Modal */
+    .modalBack{
+      position:fixed; inset:0; background: rgba(0,0,0,.55);
+      display:none; align-items:center; justify-content:center;
+      padding:18px;
+      z-index:50;
+    }
+    .modal{
+      width:min(640px, 100%);
+      background: linear-gradient(180deg, rgba(16,26,46,.98), rgba(14,23,42,.98));
+      border:1px solid var(--border);
+      border-radius:18px;
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .modalHead{
+      padding:12px 14px;
+      border-bottom:1px solid var(--border);
+      display:flex; align-items:center; justify-content:space-between;
+      gap:10px;
+    }
+    .modalBody{padding:14px; display:grid; gap:12px;}
+    .modalFoot{
+      padding:12px 14px;
+      border-top:1px solid var(--border);
+      display:flex; justify-content:flex-end; gap:10px;
+      flex-wrap:wrap;
+    }
+    label{font-size:12px; color:var(--muted); display:block; margin-bottom:6px;}
+    .grid2{display:grid; grid-template-columns: 1fr 1fr; gap:10px;}
+    @media (max-width:560px){ .grid2{grid-template-columns:1fr} }
+
+    .photoRow{
+      display:flex; gap:12px; align-items:center; flex-wrap:wrap;
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.02);
+      padding:10px;
+      border-radius:14px;
+    }
+    .photoPreview{
+      width:56px; height:56px;
+      border-radius:999px;
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.04);
+      overflow:hidden;
+      display:flex; align-items:center; justify-content:center;
+      font-weight:800;
+      color: rgba(232,238,252,.75);
+      flex:0 0 auto;
+    }
+    .photoPreview img{width:100%; height:100%; object-fit:cover; display:block;}
+    .photoActions{display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
+    .fileInput{
+      font-size:12px;
+      padding:8px 10px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.03);
+      color: var(--muted);
+      max-width: 360px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="brand">
+        <h1>Staffing Digital Whiteboard</h1>
+        <div class="pill" id="todayPill" title="Auto-updating date">
+          <span id="todayTxt"></span>
+        </div>
+      </div>
+
+      <div class="meta">
+        <div class="pill" title="Your local login name (stored on this device)">
+          <span>Logged in as:</span>
+          <strong id="loggedInAs">Not set</strong>
+          <button class="miniBtn" id="btnLogin">Set</button>
+        </div>
+
+        <div class="pill" title="Headcount targets (saved on this device)">
+          <span style="color:var(--muted)">Targets:</span>
+          <span style="display:inline-flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <span>Inbound</span><input id="tInbound" class="targetInput" type="number" min="0" step="1" />
+            <span>Outbound</span><input id="tOutbound" class="targetInput" type="number" min="0" step="1" />
+            <span>Demora</span><input id="tDemora" class="targetInput" type="number" min="0" step="1" />
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <input id="search" class="grow" placeholder="Search associate name or login…" />
+      <button id="btnAdd">+ Add Associate</button>
+      <button id="btnClear" class="dangerBtn" title="Clears board data on this device">Clear Board</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="board" id="board"></div>
+</main>
+
+<!-- Add/Edit Modal -->
+<div class="modalBack" id="modalBack" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modalHead">
+      <strong id="modalTitle">Add Associate</strong>
+      <button class="miniBtn" id="btnCloseModal">Close</button>
+    </div>
+
+    <div class="modalBody">
+      <div class="grid2">
+        <div>
+          <label for="inpName">Associate name</label>
+          <input id="inpName" placeholder="e.g., Jordan Smith" />
+        </div>
+        <div>
+          <label for="inpLogin">Login</label>
+          <input id="inpLogin" placeholder="e.g., jsmith" />
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div>
+          <label for="selDept">Department</label>
+          <select id="selDept">
+            <option value="Inbound">Inbound</option>
+            <option value="Outbound">Outbound</option>
+            <option value="Demora">Demora</option>
+          </select>
+        </div>
+        <div>
+          <label for="selBadge">Badge</label>
+          <select id="selBadge">
+            <option value="">None</option>
+            <option value="BHD">Back Half Days (Blue)</option>
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label>Photo on badge (Upload Image)</label>
+        <div class="photoRow">
+          <div class="photoPreview" id="photoPreview">
+            <span id="photoInitial">?</span>
+            <img id="photoImg" alt="" style="display:none;" />
+          </div>
+          <div class="photoActions">
+            <input class="fileInput" id="inpPhoto" type="file" accept="image/*" />
+            <button class="miniBtn" id="btnRemovePhoto" type="button">Remove Photo</button>
+          </div>
+          <div style="color:var(--muted);font-size:12px;">
+            Stored locally on this device (no URLs).
+          </div>
+        </div>
+      </div>
+
+      <div class="footerLine">
+        <span id="modalHint">Tip: drag-and-drop cards between departments.</span>
+        <span id="editId" style="display:none;"></span>
+      </div>
+    </div>
+
+    <div class="modalFoot">
+      <button id="btnDelete" class="dangerBtn" style="display:none;">Delete</button>
+      <button id="btnSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Login Modal -->
+<div class="modalBack" id="loginBack" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
+    <div class="modalHead">
+      <strong id="loginTitle">Set Login Name</strong>
+      <button class="miniBtn" id="btnCloseLogin">Close</button>
+    </div>
+    <div class="modalBody">
+      <div>
+        <label for="inpManager">Your name (shown as “Logged in as”)</label>
+        <input id="inpManager" placeholder="e.g., Miguel Davalos" />
+      </div>
+      <div class="footerLine">
+        <span>This is a simple local login (no passwords).</span>
+        <span></span>
+      </div>
+    </div>
+    <div class="modalFoot">
+      <button id="btnSaveLogin">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const STORAGE_KEY = "staffing_whiteboard_v2";
+  const LOGIN_KEY = "staffing_whiteboard_login_v1";
+  const TARGETS_KEY = "staffing_whiteboard_targets_v1";
+
+  const departments = ["Inbound", "Outbound", "Demora"];
+
+  /** State shape:
+   * { cards: [{id, name, login, dept, badge, photoDataUrl}], updatedAt }
+   */
+  const state = loadState();
+
+  // Elements
+  const boardEl = document.getElementById("board");
+  const searchEl = document.getElementById("search");
+  const btnAdd = document.getElementById("btnAdd");
+  const btnClear = document.getElementById("btnClear");
+
+  const todayTxt = document.getElementById("todayTxt");
+  const loggedInAs = document.getElementById("loggedInAs");
+  const btnLogin = document.getElementById("btnLogin");
+
+  // Targets
+  const tInbound = document.getElementById("tInbound");
+  const tOutbound = document.getElementById("tOutbound");
+  const tDemora = document.getElementById("tDemora");
+
+  // Add/Edit modal
+  const modalBack = document.getElementById("modalBack");
+  const btnCloseModal = document.getElementById("btnCloseModal");
+  const btnSave = document.getElementById("btnSave");
+  const btnDelete = document.getElementById("btnDelete");
+
+  const inpName = document.getElementById("inpName");
+  const inpLogin = document.getElementById("inpLogin");
+  const selDept = document.getElementById("selDept");
+  const selBadge = document.getElementById("selBadge");
+  const editId = document.getElementById("editId");
+  const modalTitle = document.getElementById("modalTitle");
+
+  // Photo upload
+  const inpPhoto = document.getElementById("inpPhoto");
+  const btnRemovePhoto = document.getElementById("btnRemovePhoto");
+  const photoImg = document.getElementById("photoImg");
+  const photoInitial = document.getElementById("photoInitial");
+
+  // temp photo buffer while modal is open
+  let modalPhotoDataUrl = "";
+
+  // Login modal
+  const loginBack = document.getElementById("loginBack");
+  const btnCloseLogin = document.getElementById("btnCloseLogin");
+  const btnSaveLogin = document.getElementById("btnSaveLogin");
+  const inpManager = document.getElementById("inpManager");
+
+  // Date
+  function setDate() {
+    const d = new Date();
+    const fmt = d.toLocaleDateString(undefined, { weekday:"short", year:"numeric", month:"short", day:"numeric" });
+    todayTxt.textContent = fmt;
+  }
+  setDate();
+  setInterval(setDate, 60_000);
+
+  // Login name
+  function loadLogin() {
+    const v = localStorage.getItem(LOGIN_KEY) || "";
+    loggedInAs.textContent = v.trim() ? v : "Not set";
+    inpManager.value = v;
+  }
+  function saveLogin() {
+    localStorage.setItem(LOGIN_KEY, (inpManager.value || "").trim());
+    loadLogin();
+    closeLogin();
+  }
+  loadLogin();
+
+  // Targets
+  function loadTargets(){
+    try{
+      const raw = localStorage.getItem(TARGETS_KEY);
+      if (!raw) return { Inbound: 0, Outbound: 0, Demora: 0 };
+      const t = JSON.parse(raw);
+      return {
+        Inbound: Number(t.Inbound ?? 0),
+        Outbound: Number(t.Outbound ?? 0),
+        Demora: Number(t.Demora ?? 0),
+      };
+    }catch{
+      return { Inbound: 0, Outbound: 0, Demora: 0 };
+    }
+  }
+  function saveTargets(t){
+    localStorage.setItem(TARGETS_KEY, JSON.stringify(t));
+  }
+  const targets = loadTargets();
+  tInbound.value = targets.Inbound;
+  tOutbound.value = targets.Outbound;
+  tDemora.value = targets.Demora;
+
+  function onTargetsChange(){
+    targets.Inbound = clampNonNegInt(tInbound.value);
+    targets.Outbound = clampNonNegInt(tOutbound.value);
+    targets.Demora = clampNonNegInt(tDemora.value);
+    tInbound.value = targets.Inbound;
+    tOutbound.value = targets.Outbound;
+    tDemora.value = targets.Demora;
+    saveTargets(targets);
+    render(); // refresh indicators
+  }
+  tInbound.addEventListener("change", onTargetsChange);
+  tOutbound.addEventListener("change", onTargetsChange);
+  tDemora.addEventListener("change", onTargetsChange);
+
+  function clampNonNegInt(v){
+    const n = Math.max(0, Math.floor(Number(v || 0)));
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  // Render
+  function render() {
+    const q = (searchEl.value || "").trim().toLowerCase();
+
+    boardEl.innerHTML = "";
+    for (const dept of departments) {
+      const col = document.createElement("section");
+      col.className = "col";
+
+      const head = document.createElement("div");
+      head.className = "colhead";
+
+      const title = document.createElement("div");
+      title.className = "coltitle";
+
+      const strong = document.createElement("strong");
+      strong.textContent = dept;
+
+      const sub = document.createElement("div");
+      sub.className = "colsub";
+
+      const count = state.cards.filter(c => c.dept === dept).length;
+      const target = targets[dept] ?? 0;
+
+      const indicator = document.createElement("span");
+      indicator.className = "indicator";
+
+      const dot = document.createElement("span");
+      dot.className = "dot";
+
+      // RED/GREEN only:
+      // Green when count >= target (or target is 0), else red.
+      const ok = (target === 0) ? true : (count >= target);
+      if (ok) dot.classList.add("ok");
+
+      const text = document.createElement("span");
+      text.textContent = `HC ${count} / Target ${target}`;
+
+      indicator.append(dot, text);
+
+      const addBtn = document.createElement("button");
+      addBtn.className = "miniBtn";
+      addBtn.textContent = "Add";
+      addBtn.addEventListener("click", () => openModal({ dept }));
+
+      sub.appendChild(indicator);
+      title.append(strong, sub);
+
+      head.append(title, addBtn);
+
+      const zone = document.createElement("div");
+      zone.className = "dropzone";
+      zone.dataset.dept = dept;
+
+      zone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        zone.classList.add("dragover");
+      });
+      zone.addEventListener("dragleave", () => zone.classList.remove("dragover"));
+      zone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        zone.classList.remove("dragover");
+        const id = e.dataTransfer.getData("text/plain");
+        if (!id) return;
+        moveCard(id, dept);
+      });
+
+      const cards = state.cards
+        .filter(c => c.dept === dept)
+        .filter(c => {
+          if (!q) return true;
+          return (c.name || "").toLowerCase().includes(q) || (c.login || "").toLowerCase().includes(q);
+        });
+
+      for (const c of cards) zone.appendChild(renderCard(c, q));
+
+      col.append(head, zone);
+      boardEl.appendChild(col);
+    }
+  }
+
+  function renderCard(c, searching) {
+    const card = document.createElement("div");
+    card.className = "card";
+    card.draggable = true;
+    card.dataset.id = c.id;
+
+    card.addEventListener("dragstart", (e) => {
+      e.dataTransfer.setData("text/plain", c.id);
+      e.dataTransfer.effectAllowed = "move";
+    });
+
+    const top = document.createElement("div");
+    top.className = "cardTop";
+
+    const left = document.createElement("div");
+    left.className = "leftRow";
+
+    // avatar
+    const av = document.createElement("div");
+    av.className = "avatar";
+    const initial = (c.name || c.login || "?").trim().charAt(0).toUpperCase() || "?";
+
+    if (c.photoDataUrl) {
+      const img = document.createElement("img");
+      img.src = c.photoDataUrl;
+      img.alt = "";
+      av.innerHTML = "";
+      av.appendChild(img);
+    } else {
+      av.textContent = initial;
+    }
+
+    const who = document.createElement("div");
+    who.className = "who";
+
+    const name = document.createElement("div");
+    name.className = "name";
+    name.textContent = c.name || "(No name)";
+
+    const login = document.createElement("div");
+    login.className = "login";
+    login.textContent = c.login ? `@${c.login}` : "(No login)";
+
+    who.append(name, login);
+    left.append(av, who);
+
+    const actions = document.createElement("div");
+    const editBtn = document.createElement("button");
+    editBtn.className = "miniBtn";
+    editBtn.textContent = "Edit";
+    editBtn.addEventListener("click", () => openModal(c));
+    actions.appendChild(editBtn);
+
+    top.append(left, actions);
+
+    const chips = document.createElement("div");
+    chips.className = "chips";
+
+    if (c.badge === "BHD") {
+      const chip = document.createElement("span");
+      chip.className = "chip blue";
+
+      // photo on badge (if exists)
+      if (c.photoDataUrl) {
+        const bav = document.createElement("span");
+        bav.className = "badgeAvatar";
+        const bi = document.createElement("img");
+        bi.src = c.photoDataUrl;
+        bi.alt = "";
+        bav.appendChild(bi);
+        chip.appendChild(bav);
+      }
+
+      const txt = document.createElement("span");
+      txt.textContent = "Back Half Days";
+      chip.appendChild(txt);
+
+      chips.appendChild(chip);
+    }
+
+    if (searching) {
+      const deptChip = document.createElement("span");
+      deptChip.className = "chip";
+      deptChip.textContent = c.dept;
+      chips.appendChild(deptChip);
+    }
+
+    card.append(top);
+    if (chips.childElementCount) card.append(chips);
+
+    return card;
+  }
+
+  // State ops
+  function addCard(data) {
+    state.cards.unshift({
+      id: crypto.randomUUID(),
+      name: (data.name || "").trim(),
+      login: (data.login || "").trim(),
+      dept: data.dept || "Inbound",
+      badge: data.badge || "",
+      photoDataUrl: data.photoDataUrl || ""
+    });
+    touch();
+  }
+
+  function updateCard(id, data) {
+    const i = state.cards.findIndex(c => c.id === id);
+    if (i === -1) return;
+    state.cards[i] = {
+      ...state.cards[i],
+      name: (data.name || "").trim(),
+      login: (data.login || "").trim(),
+      dept: data.dept || state.cards[i].dept,
+      badge: data.badge || "",
+      photoDataUrl: data.photoDataUrl || ""
+    };
+    touch();
+  }
+
+  function deleteCard(id) {
+    const i = state.cards.findIndex(c => c.id === id);
+    if (i === -1) return;
+    state.cards.splice(i, 1);
+    touch();
+  }
+
+  function moveCard(id, newDept) {
+    const c = state.cards.find(x => x.id === id);
+    if (!c) return;
+    c.dept = newDept;
+    touch();
+  }
+
+  function touch() {
+    state.updatedAt = Date.now();
+    saveState(state);
+    render();
+  }
+
+  // Modal logic
+  function openModal(cardOrDefaults = {}) {
+    const isEdit = !!cardOrDefaults.id;
+    modalTitle.textContent = isEdit ? "Edit Associate" : "Add Associate";
+    btnDelete.style.display = isEdit ? "inline-flex" : "none";
+
+    editId.textContent = cardOrDefaults.id || "";
+    editId.style.display = "none";
+
+    inpName.value = cardOrDefaults.name || "";
+    inpLogin.value = cardOrDefaults.login || "";
+    selDept.value = cardOrDefaults.dept || "Inbound";
+    selBadge.value = cardOrDefaults.badge || "";
+
+    // photo buffer
+    modalPhotoDataUrl = cardOrDefaults.photoDataUrl || "";
+    inpPhoto.value = ""; // reset file input
+    syncPhotoPreview();
+
+    modalBack.style.display = "flex";
+    modalBack.setAttribute("aria-hidden", "false");
+    setTimeout(() => inpName.focus(), 0);
+  }
+
+  function closeModal() {
+    modalBack.style.display = "none";
+    modalBack.setAttribute("aria-hidden", "true");
+    modalPhotoDataUrl = "";
+    inpPhoto.value = "";
+  }
+
+  function syncPhotoPreview(){
+    const initial = (inpName.value || inpLogin.value || "?").trim().charAt(0).toUpperCase() || "?";
+    if (modalPhotoDataUrl) {
+      photoImg.src = modalPhotoDataUrl;
+      photoImg.style.display = "block";
+      photoInitial.style.display = "none";
+    } else {
+      photoImg.src = "";
+      photoImg.style.display = "none";
+      photoInitial.textContent = initial;
+      photoInitial.style.display = "block";
+    }
+  }
+
+  // Update preview initial as user types name/login
+  inpName.addEventListener("input", () => { if (!modalPhotoDataUrl) syncPhotoPreview(); });
+  inpLogin.addEventListener("input", () => { if (!modalPhotoDataUrl) syncPhotoPreview(); });
+
+  // Photo upload -> DataURL
+  inpPhoto.addEventListener("change", async () => {
+    const file = inpPhoto.files && inpPhoto.files[0];
+    if (!file) return;
+
+    // guard: keep localStorage from blowing up with huge images
+    const MAX_MB = 1.2; // ~1.2MB raw file; dataURL expands, but this keeps it practical.
+    if (file.size > MAX_MB * 1024 * 1024) {
+      alert("That image is a bit large. Please choose a smaller photo (about 1MB or less).");
+      inpPhoto.value = "";
+      return;
+    }
+
+    const dataUrl = await readFileAsDataURL(file);
+    modalPhotoDataUrl = dataUrl;
+    syncPhotoPreview();
+  });
+
+  btnRemovePhoto.addEventListener("click", () => {
+    modalPhotoDataUrl = "";
+    inpPhoto.value = "";
+    syncPhotoPreview();
+  });
+
+  function readFileAsDataURL(file){
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(String(r.result || ""));
+      r.onerror = () => reject(r.error);
+      r.readAsDataURL(file);
+    });
+  }
+
+  btnAdd.addEventListener("click", () => openModal({ dept:"Inbound" }));
+  btnCloseModal.addEventListener("click", closeModal);
+  modalBack.addEventListener("click", (e) => {
+    if (e.target === modalBack) closeModal();
+  });
+
+  btnSave.addEventListener("click", () => {
+    const data = {
+      name: inpName.value,
+      login: inpLogin.value,
+      dept: selDept.value,
+      badge: selBadge.value,
+      photoDataUrl: modalPhotoDataUrl
+    };
+
+    const id = editId.textContent;
+    if (id) updateCard(id, data);
+    else addCard(data);
+
+    closeModal();
+  });
+
+  btnDelete.addEventListener("click", () => {
+    const id = editId.textContent;
+    if (!id) return;
+    deleteCard(id);
+    closeModal();
+  });
+
+  // Login modal logic
+  function openLogin() {
+    loadLogin();
+    loginBack.style.display = "flex";
+    loginBack.setAttribute("aria-hidden", "false");
+    setTimeout(() => inpManager.focus(), 0);
+  }
+  function closeLogin() {
+    loginBack.style.display = "none";
+    loginBack.setAttribute("aria-hidden", "true");
+  }
+  btnLogin.addEventListener("click", openLogin);
+  btnCloseLogin.addEventListener("click", closeLogin);
+  loginBack.addEventListener("click", (e) => {
+    if (e.target === loginBack) closeLogin();
+  });
+  btnSaveLogin.addEventListener("click", saveLogin);
+
+  // Search
+  let t = null;
+  searchEl.addEventListener("input", () => {
+    clearTimeout(t);
+    t = setTimeout(render, 80);
+  });
+
+  // Clear board
+  btnClear.addEventListener("click", () => {
+    const ok = confirm("Clear all associates from this board on this device?");
+    if (!ok) return;
+    state.cards = [];
+    touch();
+  });
+
+  // Persist
+  function loadState(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return { cards: [], updatedAt: Date.now() };
+      const parsed = JSON.parse(raw);
+      if (!parsed || !Array.isArray(parsed.cards)) return { cards: [], updatedAt: Date.now() };
+      // back-compat fill
+      parsed.cards = parsed.cards.map(c => ({
+        id: c.id || crypto.randomUUID(),
+        name: c.name || "",
+        login: c.login || "",
+        dept: c.dept || "Inbound",
+        badge: c.badge || "",
+        photoDataUrl: c.photoDataUrl || ""
+      }));
+      return { cards: parsed.cards, updatedAt: parsed.updatedAt || Date.now() };
+    }catch{
+      return { cards: [], updatedAt: Date.now() };
+    }
+  }
+  function saveState(s){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+  }
+
+  // Initial render
+  render();
+
+})();
+</script>
+</body>
+</html>
