@@ -7,18 +7,18 @@
   <style>
     :root{
       --bg:#0b1220;
-      --panel:#101a2e;
-      --panel2:#0e172a;
       --text:#e8eefc;
       --muted:#a8b3cf;
       --border:rgba(255,255,255,.10);
       --shadow: 0 10px 25px rgba(0,0,0,.35);
-      --accent:#6ea8fe;
       --danger:#ff5c5c;
       --ok:#2ecc71;
-      --badgeBlue:#1f6feb;
       --chip:#1a2440;
-      --warn:#f1c40f;
+
+      /* badge colors */
+      --badgeBlue:#1f6feb;   /* Back Half Days */
+      --badgeTeal:#0ea5a5;   /* Shift Pattern Co-Host */
+      --rolePurple:#7c3aed;  /* Role badge */
     }
     *{box-sizing:border-box}
     body{
@@ -49,7 +49,6 @@
       box-shadow: 0 1px 0 rgba(255,255,255,.05) inset;
       flex-wrap:wrap;
     }
-    .pill strong{color:var(--text)}
     .controls{
       display:flex; gap:10px; flex-wrap:wrap; align-items:center;
       width:100%;
@@ -80,7 +79,6 @@
       border-color: rgba(255,92,92,.35);
     }
     .dangerBtn:hover{background: rgba(255,92,92,.22)}
-    .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
     .grow{flex:1; min-width:220px;}
 
     main{max-width:1200px; margin:0 auto; padding:16px;}
@@ -117,7 +115,6 @@
       font-size:12px; color:var(--muted);
     }
 
-    /* target indicator */
     .indicator{
       display:inline-flex;
       align-items:center;
@@ -190,17 +187,8 @@
       font-weight:800;
       color: rgba(232,238,252,.75);
     }
-    .avatar img{
-      width:100%;
-      height:100%;
-      object-fit:cover;
-      display:block;
-    }
-    .who{
-      display:flex; flex-direction:column; gap:2px;
-      min-width:0;
-      flex:1;
-    }
+    .avatar img{width:100%; height:100%; object-fit:cover; display:block;}
+    .who{display:flex; flex-direction:column; gap:2px; min-width:0; flex:1;}
     .name{
       font-weight:700;
       font-size:14px;
@@ -216,6 +204,7 @@
       overflow:hidden;
       text-overflow:ellipsis;
     }
+
     .chips{display:flex; gap:6px; flex-wrap:wrap; align-items:center;}
     .chip{
       font-size:11px;
@@ -225,12 +214,32 @@
       border:1px solid var(--border);
       color: var(--text);
       display:inline-flex; align-items:center; gap:6px;
+      max-width: 100%;
     }
     .chip.blue{
       background: rgba(31,111,235,.18);
       border-color: rgba(31,111,235,.45);
       color: #dbeafe;
     }
+    .chip.teal{
+      background: rgba(14,165,165,.16);
+      border-color: rgba(14,165,165,.45);
+      color: #d8ffff;
+    }
+    .chip.role{
+      background: rgba(124,58,237,.16);
+      border-color: rgba(124,58,237,.45);
+      color: #efe6ff;
+    }
+    .chip .clip{
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      max-width: 240px;
+      display:inline-block;
+      vertical-align:bottom;
+    }
+
     .badgeAvatar{
       width:16px; height:16px;
       border-radius:999px;
@@ -240,11 +249,7 @@
       display:inline-flex; align-items:center; justify-content:center;
       flex:0 0 auto;
     }
-    .badgeAvatar img{
-      width:100%; height:100%;
-      object-fit:cover;
-      display:block;
-    }
+    .badgeAvatar img{width:100%; height:100%; object-fit:cover; display:block;}
 
     .miniBtn{
       font-size:12px;
@@ -256,12 +261,6 @@
       cursor:pointer;
     }
     .miniBtn:hover{background: rgba(255,255,255,.07)}
-    .footerLine{
-      display:flex; align-items:center; justify-content:space-between;
-      color: var(--muted);
-      font-size:12px;
-      margin-top:4px;
-    }
 
     /* Modal */
     .modalBack{
@@ -271,7 +270,7 @@
       z-index:50;
     }
     .modal{
-      width:min(640px, 100%);
+      width:min(720px, 100%);
       background: linear-gradient(180deg, rgba(16,26,46,.98), rgba(14,23,42,.98));
       border:1px solid var(--border);
       border-radius:18px;
@@ -324,6 +323,28 @@
       color: var(--muted);
       max-width: 360px;
     }
+
+    .checks{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.02);
+      padding:10px;
+      border-radius:14px;
+    }
+    .check{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      padding:6px 8px;
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.03);
+      border-radius:12px;
+    }
+    .check input{width:16px; height:16px; padding:0}
+    .check span{font-size:12px; color: var(--text)}
   </style>
 </head>
 <body>
@@ -333,7 +354,7 @@
     <div class="topbar">
       <div class="brand">
         <h1>Staffing Digital Whiteboard</h1>
-        <div class="pill" id="todayPill" title="Auto-updating date">
+        <div class="pill" title="Auto-updating date">
           <span id="todayTxt"></span>
         </div>
       </div>
@@ -357,7 +378,7 @@
     </div>
 
     <div class="controls">
-      <input id="search" class="grow" placeholder="Search associate name or login…" />
+      <input id="search" class="grow" placeholder="Search associate name, login, or role…" />
       <button id="btnAdd">+ Add Associate</button>
       <button id="btnClear" class="dangerBtn" title="Clears board data on this device">Clear Board</button>
     </div>
@@ -398,11 +419,36 @@
           </select>
         </div>
         <div>
-          <label for="selBadge">Badge</label>
-          <select id="selBadge">
+          <label for="selRole">Role / Path (badge)</label>
+          <select id="selRole">
             <option value="">None</option>
-            <option value="BHD">Back Half Days (Blue)</option>
+            <option value="Problem Solver">Problem Solver</option>
+            <option value="Picker">Picker</option>
+            <option value="Stower">Stower</option>
+            <option value="Process Guide - Pick">Process Guide - Pick</option>
+            <option value="Process Guide - Stow">Process Guide - Stow</option>
+            <option value="Decanter">Decanter</option>
+            <option value="Pick Transporter">Pick Transporter</option>
+            <option value="Stow Transporter">Stow Transporter</option>
+            <option value="WaterSpider">WaterSpider</option>
+            <option value="ICQA">ICQA</option>
           </select>
+        </div>
+      </div>
+
+      <!-- NEW: Multi-select badges -->
+      <div>
+        <label>Badges</label>
+        <div class="checks">
+          <label class="check" title="Back Half Days (Blue badge)">
+            <input id="chkBHD" type="checkbox" />
+            <span>Back Half Days (Blue)</span>
+          </label>
+
+          <label class="check" title="Shift Pattern Co-Host badge">
+            <input id="chkCOHOST" type="checkbox" />
+            <span>Shift Pattern Co-Host</span>
+          </label>
         </div>
       </div>
 
@@ -423,8 +469,8 @@
         </div>
       </div>
 
-      <div class="footerLine">
-        <span id="modalHint">Tip: drag-and-drop cards between departments.</span>
+      <div style="display:flex;justify-content:space-between;gap:10px;color:var(--muted);font-size:12px;">
+        <span>Tip: drag-and-drop cards between departments.</span>
         <span id="editId" style="display:none;"></span>
       </div>
     </div>
@@ -448,7 +494,7 @@
         <label for="inpManager">Your name (shown as “Logged in as”)</label>
         <input id="inpManager" placeholder="e.g., Miguel Davalos" />
       </div>
-      <div class="footerLine">
+      <div style="display:flex;justify-content:space-between;gap:10px;color:var(--muted);font-size:12px;">
         <span>This is a simple local login (no passwords).</span>
         <span></span>
       </div>
@@ -461,14 +507,14 @@
 
 <script>
 (() => {
-  const STORAGE_KEY = "staffing_whiteboard_v2";
+  const STORAGE_KEY = "staffing_whiteboard_v4";
   const LOGIN_KEY = "staffing_whiteboard_login_v1";
   const TARGETS_KEY = "staffing_whiteboard_targets_v1";
 
   const departments = ["Inbound", "Outbound", "Demora"];
 
   /** State shape:
-   * { cards: [{id, name, login, dept, badge, photoDataUrl}], updatedAt }
+   * { cards: [{id, name, login, dept, badges:[], role, photoDataUrl}], updatedAt }
    */
   const state = loadState();
 
@@ -486,6 +532,7 @@
   const tInbound = document.getElementById("tInbound");
   const tOutbound = document.getElementById("tOutbound");
   const tDemora = document.getElementById("tDemora");
+  const targets = loadTargets();
 
   // Add/Edit modal
   const modalBack = document.getElementById("modalBack");
@@ -496,7 +543,9 @@
   const inpName = document.getElementById("inpName");
   const inpLogin = document.getElementById("inpLogin");
   const selDept = document.getElementById("selDept");
-  const selBadge = document.getElementById("selBadge");
+  const selRole = document.getElementById("selRole");
+  const chkBHD = document.getElementById("chkBHD");
+  const chkCOHOST = document.getElementById("chkCOHOST");
   const editId = document.getElementById("editId");
   const modalTitle = document.getElementById("modalTitle");
 
@@ -506,7 +555,6 @@
   const photoImg = document.getElementById("photoImg");
   const photoInitial = document.getElementById("photoInitial");
 
-  // temp photo buffer while modal is open
   let modalPhotoDataUrl = "";
 
   // Login modal
@@ -524,7 +572,7 @@
   setDate();
   setInterval(setDate, 60_000);
 
-  // Login name
+  // Login
   function loadLogin() {
     const v = localStorage.getItem(LOGIN_KEY) || "";
     loggedInAs.textContent = v.trim() ? v : "Not set";
@@ -537,29 +585,15 @@
   }
   loadLogin();
 
-  // Targets
-  function loadTargets(){
-    try{
-      const raw = localStorage.getItem(TARGETS_KEY);
-      if (!raw) return { Inbound: 0, Outbound: 0, Demora: 0 };
-      const t = JSON.parse(raw);
-      return {
-        Inbound: Number(t.Inbound ?? 0),
-        Outbound: Number(t.Outbound ?? 0),
-        Demora: Number(t.Demora ?? 0),
-      };
-    }catch{
-      return { Inbound: 0, Outbound: 0, Demora: 0 };
-    }
-  }
-  function saveTargets(t){
-    localStorage.setItem(TARGETS_KEY, JSON.stringify(t));
-  }
-  const targets = loadTargets();
+  // Targets UI
   tInbound.value = targets.Inbound;
   tOutbound.value = targets.Outbound;
   tDemora.value = targets.Demora;
 
+  function clampNonNegInt(v){
+    const n = Math.max(0, Math.floor(Number(v || 0)));
+    return Number.isFinite(n) ? n : 0;
+  }
   function onTargetsChange(){
     targets.Inbound = clampNonNegInt(tInbound.value);
     targets.Outbound = clampNonNegInt(tOutbound.value);
@@ -568,16 +602,11 @@
     tOutbound.value = targets.Outbound;
     tDemora.value = targets.Demora;
     saveTargets(targets);
-    render(); // refresh indicators
+    render();
   }
   tInbound.addEventListener("change", onTargetsChange);
   tOutbound.addEventListener("change", onTargetsChange);
   tDemora.addEventListener("change", onTargetsChange);
-
-  function clampNonNegInt(v){
-    const n = Math.max(0, Math.floor(Number(v || 0)));
-    return Number.isFinite(n) ? n : 0;
-  }
 
   // Render
   function render() {
@@ -609,8 +638,6 @@
       const dot = document.createElement("span");
       dot.className = "dot";
 
-      // RED/GREEN only:
-      // Green when count >= target (or target is 0), else red.
       const ok = (target === 0) ? true : (count >= target);
       if (ok) dot.classList.add("ok");
 
@@ -626,7 +653,6 @@
 
       sub.appendChild(indicator);
       title.append(strong, sub);
-
       head.append(title, addBtn);
 
       const zone = document.createElement("div");
@@ -650,7 +676,11 @@
         .filter(c => c.dept === dept)
         .filter(c => {
           if (!q) return true;
-          return (c.name || "").toLowerCase().includes(q) || (c.login || "").toLowerCase().includes(q);
+          const badgesText = (c.badges || []).join(" ").toLowerCase();
+          return (c.name || "").toLowerCase().includes(q)
+              || (c.login || "").toLowerCase().includes(q)
+              || (c.role || "").toLowerCase().includes(q)
+              || badgesText.includes(q);
         });
 
       for (const c of cards) zone.appendChild(renderCard(c, q));
@@ -658,6 +688,55 @@
       col.append(head, zone);
       boardEl.appendChild(col);
     }
+  }
+
+  function renderBadgeChip(code, c){
+    // Optional photo on chip
+    const withAvatar = !!c.photoDataUrl;
+
+    if (code === "BHD") {
+      const chip = document.createElement("span");
+      chip.className = "chip blue";
+
+      if (withAvatar) {
+        const bav = document.createElement("span");
+        bav.className = "badgeAvatar";
+        const bi = document.createElement("img");
+        bi.src = c.photoDataUrl;
+        bi.alt = "";
+        bav.appendChild(bi);
+        chip.appendChild(bav);
+      }
+
+      const txt = document.createElement("span");
+      txt.className = "clip";
+      txt.textContent = "Back Half Days";
+      chip.appendChild(txt);
+      return chip;
+    }
+
+    if (code === "COHOST") {
+      const chip = document.createElement("span");
+      chip.className = "chip teal";
+
+      if (withAvatar) {
+        const bav = document.createElement("span");
+        bav.className = "badgeAvatar";
+        const bi = document.createElement("img");
+        bi.src = c.photoDataUrl;
+        bi.alt = "";
+        bav.appendChild(bi);
+        chip.appendChild(bav);
+      }
+
+      const txt = document.createElement("span");
+      txt.className = "clip";
+      txt.textContent = "Shift Pattern Co-Host";
+      chip.appendChild(txt);
+      return chip;
+    }
+
+    return null;
   }
 
   function renderCard(c, searching) {
@@ -677,7 +756,6 @@
     const left = document.createElement("div");
     left.className = "leftRow";
 
-    // avatar
     const av = document.createElement("div");
     av.className = "avatar";
     const initial = (c.name || c.login || "?").trim().charAt(0).toUpperCase() || "?";
@@ -718,11 +796,18 @@
     const chips = document.createElement("div");
     chips.className = "chips";
 
-    if (c.badge === "BHD") {
-      const chip = document.createElement("span");
-      chip.className = "chip blue";
+    // Badges (multi)
+    const badges = Array.isArray(c.badges) ? c.badges : [];
+    for (const b of badges) {
+      const chip = renderBadgeChip(b, c);
+      if (chip) chips.appendChild(chip);
+    }
 
-      // photo on badge (if exists)
+    // Role/Path badge
+    if (c.role) {
+      const chip = document.createElement("span");
+      chip.className = "chip role";
+
       if (c.photoDataUrl) {
         const bav = document.createElement("span");
         bav.className = "badgeAvatar";
@@ -734,7 +819,8 @@
       }
 
       const txt = document.createElement("span");
-      txt.textContent = "Back Half Days";
+      txt.className = "clip";
+      txt.textContent = c.role;
       chip.appendChild(txt);
 
       chips.appendChild(chip);
@@ -760,7 +846,8 @@
       name: (data.name || "").trim(),
       login: (data.login || "").trim(),
       dept: data.dept || "Inbound",
-      badge: data.badge || "",
+      badges: data.badges || [],
+      role: data.role || "",
       photoDataUrl: data.photoDataUrl || ""
     });
     touch();
@@ -770,209 +857,4 @@
     const i = state.cards.findIndex(c => c.id === id);
     if (i === -1) return;
     state.cards[i] = {
-      ...state.cards[i],
-      name: (data.name || "").trim(),
-      login: (data.login || "").trim(),
-      dept: data.dept || state.cards[i].dept,
-      badge: data.badge || "",
-      photoDataUrl: data.photoDataUrl || ""
-    };
-    touch();
-  }
-
-  function deleteCard(id) {
-    const i = state.cards.findIndex(c => c.id === id);
-    if (i === -1) return;
-    state.cards.splice(i, 1);
-    touch();
-  }
-
-  function moveCard(id, newDept) {
-    const c = state.cards.find(x => x.id === id);
-    if (!c) return;
-    c.dept = newDept;
-    touch();
-  }
-
-  function touch() {
-    state.updatedAt = Date.now();
-    saveState(state);
-    render();
-  }
-
-  // Modal logic
-  function openModal(cardOrDefaults = {}) {
-    const isEdit = !!cardOrDefaults.id;
-    modalTitle.textContent = isEdit ? "Edit Associate" : "Add Associate";
-    btnDelete.style.display = isEdit ? "inline-flex" : "none";
-
-    editId.textContent = cardOrDefaults.id || "";
-    editId.style.display = "none";
-
-    inpName.value = cardOrDefaults.name || "";
-    inpLogin.value = cardOrDefaults.login || "";
-    selDept.value = cardOrDefaults.dept || "Inbound";
-    selBadge.value = cardOrDefaults.badge || "";
-
-    // photo buffer
-    modalPhotoDataUrl = cardOrDefaults.photoDataUrl || "";
-    inpPhoto.value = ""; // reset file input
-    syncPhotoPreview();
-
-    modalBack.style.display = "flex";
-    modalBack.setAttribute("aria-hidden", "false");
-    setTimeout(() => inpName.focus(), 0);
-  }
-
-  function closeModal() {
-    modalBack.style.display = "none";
-    modalBack.setAttribute("aria-hidden", "true");
-    modalPhotoDataUrl = "";
-    inpPhoto.value = "";
-  }
-
-  function syncPhotoPreview(){
-    const initial = (inpName.value || inpLogin.value || "?").trim().charAt(0).toUpperCase() || "?";
-    if (modalPhotoDataUrl) {
-      photoImg.src = modalPhotoDataUrl;
-      photoImg.style.display = "block";
-      photoInitial.style.display = "none";
-    } else {
-      photoImg.src = "";
-      photoImg.style.display = "none";
-      photoInitial.textContent = initial;
-      photoInitial.style.display = "block";
-    }
-  }
-
-  // Update preview initial as user types name/login
-  inpName.addEventListener("input", () => { if (!modalPhotoDataUrl) syncPhotoPreview(); });
-  inpLogin.addEventListener("input", () => { if (!modalPhotoDataUrl) syncPhotoPreview(); });
-
-  // Photo upload -> DataURL
-  inpPhoto.addEventListener("change", async () => {
-    const file = inpPhoto.files && inpPhoto.files[0];
-    if (!file) return;
-
-    // guard: keep localStorage from blowing up with huge images
-    const MAX_MB = 1.2; // ~1.2MB raw file; dataURL expands, but this keeps it practical.
-    if (file.size > MAX_MB * 1024 * 1024) {
-      alert("That image is a bit large. Please choose a smaller photo (about 1MB or less).");
-      inpPhoto.value = "";
-      return;
-    }
-
-    const dataUrl = await readFileAsDataURL(file);
-    modalPhotoDataUrl = dataUrl;
-    syncPhotoPreview();
-  });
-
-  btnRemovePhoto.addEventListener("click", () => {
-    modalPhotoDataUrl = "";
-    inpPhoto.value = "";
-    syncPhotoPreview();
-  });
-
-  function readFileAsDataURL(file){
-    return new Promise((resolve, reject) => {
-      const r = new FileReader();
-      r.onload = () => resolve(String(r.result || ""));
-      r.onerror = () => reject(r.error);
-      r.readAsDataURL(file);
-    });
-  }
-
-  btnAdd.addEventListener("click", () => openModal({ dept:"Inbound" }));
-  btnCloseModal.addEventListener("click", closeModal);
-  modalBack.addEventListener("click", (e) => {
-    if (e.target === modalBack) closeModal();
-  });
-
-  btnSave.addEventListener("click", () => {
-    const data = {
-      name: inpName.value,
-      login: inpLogin.value,
-      dept: selDept.value,
-      badge: selBadge.value,
-      photoDataUrl: modalPhotoDataUrl
-    };
-
-    const id = editId.textContent;
-    if (id) updateCard(id, data);
-    else addCard(data);
-
-    closeModal();
-  });
-
-  btnDelete.addEventListener("click", () => {
-    const id = editId.textContent;
-    if (!id) return;
-    deleteCard(id);
-    closeModal();
-  });
-
-  // Login modal logic
-  function openLogin() {
-    loadLogin();
-    loginBack.style.display = "flex";
-    loginBack.setAttribute("aria-hidden", "false");
-    setTimeout(() => inpManager.focus(), 0);
-  }
-  function closeLogin() {
-    loginBack.style.display = "none";
-    loginBack.setAttribute("aria-hidden", "true");
-  }
-  btnLogin.addEventListener("click", openLogin);
-  btnCloseLogin.addEventListener("click", closeLogin);
-  loginBack.addEventListener("click", (e) => {
-    if (e.target === loginBack) closeLogin();
-  });
-  btnSaveLogin.addEventListener("click", saveLogin);
-
-  // Search
-  let t = null;
-  searchEl.addEventListener("input", () => {
-    clearTimeout(t);
-    t = setTimeout(render, 80);
-  });
-
-  // Clear board
-  btnClear.addEventListener("click", () => {
-    const ok = confirm("Clear all associates from this board on this device?");
-    if (!ok) return;
-    state.cards = [];
-    touch();
-  });
-
-  // Persist
-  function loadState(){
-    try{
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return { cards: [], updatedAt: Date.now() };
-      const parsed = JSON.parse(raw);
-      if (!parsed || !Array.isArray(parsed.cards)) return { cards: [], updatedAt: Date.now() };
-      // back-compat fill
-      parsed.cards = parsed.cards.map(c => ({
-        id: c.id || crypto.randomUUID(),
-        name: c.name || "",
-        login: c.login || "",
-        dept: c.dept || "Inbound",
-        badge: c.badge || "",
-        photoDataUrl: c.photoDataUrl || ""
-      }));
-      return { cards: parsed.cards, updatedAt: parsed.updatedAt || Date.now() };
-    }catch{
-      return { cards: [], updatedAt: Date.now() };
-    }
-  }
-  function saveState(s){
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
-  }
-
-  // Initial render
-  render();
-
-})();
-</script>
-</body>
-</html>
+      ...state.cards
