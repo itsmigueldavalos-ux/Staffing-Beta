@@ -152,19 +152,6 @@
       .actions { display:flex; gap: 8px; align-items: center; }
       .iconBtn { padding: 8px 10px; border-radius: 12px; font-size: 12px; }
 
-      .panel {
-        margin-top: 14px;
-        padding: 14px;
-        border: 1px solid var(--border);
-        border-radius: 16px;
-        background: rgba(18,26,51,.55);
-        box-shadow: var(--shadow);
-      }
-      .panel h3 { margin: 0 0 10px 0; font-size: 14px; }
-      .grid2 { display:grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-      @media (max-width: 800px) { .grid2 { grid-template-columns: 1fr; } }
-      .formRow { display:flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
-
       .toast {
         position: fixed;
         left: 50%;
@@ -249,7 +236,7 @@
       }
 
       function App() {
-        // Keep login stored, but no placeholder text in the input
+        // Kept (no placeholder). You can leave it as-is; it only impacts storage key for your browser.
         const [loginName, setLoginName] = useState(() => localStorage.getItem("swb_login") || "migudavc");
         const [activeTab, setActiveTab] = useState("staffing");
         const [lastUpdated, setLastUpdated] = useState(() => localStorage.getItem("swb_lastUpdated") || nowStamp());
@@ -277,30 +264,29 @@
           showToast._t = window.setTimeout(() => setToast(""), 1800);
         }
 
-        // ✅ Permanent Miguel badge
-        function miguelBadge() {
+        // ✅ Not permanent anymore — just a normal editable/movable card, seeded if missing
+        function miguelCard() {
           return {
-            id: "perm-miguel", // stable id
+            id: "miguel-" + uid(),
             personName: "Miguel Davalos",
             login: "migudavc",
             shiftCoHost: "DB3T0700",
             shiftPattern: "Back Half Days",
             role: "Problem Solver",
             col: "planned",
-            createdBy: "system",
+            createdBy: "migudavc",
             createdAt: new Date().toISOString(),
-            isPermanent: true,
           };
         }
 
         function defaultState() {
           return {
-            staffing: { cards: [miguelBadge()] },
+            staffing: { cards: [miguelCard()] },
             university: { cards: [] },
           };
         }
 
-        // Load state + enforce permanent Miguel badge
+        // Load state + if Miguel card missing, add it (but DO NOT overwrite col/role => fixes drag issue)
         useEffect(() => {
           const raw = localStorage.getItem(storageKey);
           const parsed = raw ? safeParse(raw, defaultState()) : defaultState();
@@ -308,22 +294,31 @@
           parsed.staffing = parsed.staffing || { cards: [] };
           parsed.staffing.cards = Array.isArray(parsed.staffing.cards) ? parsed.staffing.cards : [];
 
-          // remove any duplicates and re-insert the permanent one
-          const kept = parsed.staffing.cards.filter(c => c && c.id !== "perm-miguel");
-          parsed.staffing.cards = [miguelBadge(), ...kept];
+          const hasMiguel = parsed.staffing.cards.some(
+            (c) => c && c.login === "migudavc" && c.personName === "Miguel Davalos"
+          );
+
+          if (!hasMiguel) {
+            parsed.staffing.cards = [miguelCard(), ...parsed.staffing.cards];
+          } else {
+            // Ensure the info is correct (edit fields) but keep current col/role
+            parsed.staffing.cards = parsed.staffing.cards.map((c) => {
+              if (!(c && c.login === "migudavc" && c.personName === "Miguel Davalos")) return c;
+              return {
+                ...c,
+                personName: "Miguel Davalos",
+                login: "migudavc",
+                shiftCoHost: "DB3T0700",
+                shiftPattern: "Back Half Days",
+              };
+            });
+          }
 
           setState(parsed);
           // eslint-disable-next-line react-hooks/exhaustive-deps
         }, [storageKey]);
 
         function touchUpdate(nextState) {
-          // Always re-enforce permanent badge on every save
-          nextState = nextState || defaultState();
-          nextState.staffing = nextState.staffing || { cards: [] };
-          const cards = Array.isArray(nextState.staffing.cards) ? nextState.staffing.cards : [];
-          const withoutMiguel = cards.filter(c => c && c.id !== "perm-miguel");
-          nextState.staffing.cards = [miguelBadge(), ...withoutMiguel];
-
           setState(nextState);
           const stamp = nowStamp();
           setLastUpdated(stamp);
@@ -343,8 +338,8 @@
           localStorage.setItem(lockKey, isLocked ? "1" : "0");
         }, [isLocked, lockKey]);
 
-        function resetBoard() {
-          if (isLocked) { showToast("Locked (view-only). Unlock with PIN to clear."); return; }
+        function resetBoards() {
+          if (isLocked) { showToast("Locked (view-only). Unlock with PIN to reset."); return; }
           touchUpdate(defaultState());
         }
 
@@ -435,7 +430,7 @@
                   {pinSet ? "Change PIN" : "Set PIN"}
                 </button>
 
-                <button className="danger" onClick={resetBoard} title="Resets boards (Miguel badge stays)">
+                <button className="danger" onClick={resetBoards} title="Resets boards (re-adds Miguel card if needed)">
                   Reset Boards
                 </button>
               </div>
@@ -539,6 +534,14 @@
           });
         }
 
+        function removeCard(id) {
+          if (isLocked) return blocked();
+          onChange({
+            ...data,
+            cards: (data.cards || []).filter((c) => c.id !== id),
+          });
+        }
+
         function onDragStart(e, cardId) {
           if (isLocked) { e.preventDefault(); blocked(); return; }
           e.dataTransfer.setData("text/plain", cardId);
@@ -570,94 +573,84 @@
         }, [data.cards]);
 
         return (
-          <>
-            <div className="panel">
-              <h3>Permanent Badge</h3>
-              <div style={{ fontSize: 12, color: "rgba(255,255,255,.72)" }}>
-                This staffing badge is permanent and cannot be deleted. You can drag it between columns (when unlocked) and select the role.
-              </div>
-            </div>
+          <div className="board">
+            {STAFFING_COLS.map((col) => (
+              <div
+                key={col.key}
+                className={"col " + (!isLocked && dragOverCol === col.key ? "dragOver" : "")}
+                onDragOver={(e) => { allowDrop(e); if (!isLocked) setDragOverCol(col.key); }}
+                onDragLeave={() => setDragOverCol(null)}
+                onDrop={(e) => onDrop(e, col.key)}
+              >
+                <div className="colHeader">
+                  <h2>{col.title}</h2>
+                  <span>{(cardsByCol[col.key] || []).length}</span>
+                </div>
 
-            <div className="board">
-              {STAFFING_COLS.map((col) => (
-                <div
-                  key={col.key}
-                  className={"col " + (!isLocked && dragOverCol === col.key ? "dragOver" : "")}
-                  onDragOver={(e) => { allowDrop(e); if (!isLocked) setDragOverCol(col.key); }}
-                  onDragLeave={() => setDragOverCol(null)}
-                  onDrop={(e) => onDrop(e, col.key)}
-                >
-                  <div className="colHeader">
-                    <h2>{col.title}</h2>
-                    <span>{(cardsByCol[col.key] || []).length}</span>
-                  </div>
+                <div className="dropZone">
+                  {(cardsByCol[col.key] || []).length === 0 ? (
+                    <div className="hint">Drag the badge here (unlock first).</div>
+                  ) : null}
 
-                  <div className="dropZone">
-                    {(cardsByCol[col.key] || []).length === 0 ? (
-                      <div className="hint">Drag badge here.</div>
-                    ) : null}
+                  {(cardsByCol[col.key] || []).map((card) => (
+                    <div
+                      key={card.id}
+                      className="card"
+                      draggable={!isLocked}
+                      onDragStart={(e) => onDragStart(e, card.id)}
+                      title={isLocked ? "Locked (view-only)" : "Drag to move"}
+                    >
+                      <div className="cardTop">
+                        <div>
+                          <p className="name">{card.personName}</p>
 
-                    {(cardsByCol[col.key] || []).map((card) => (
-                      <div
-                        key={card.id}
-                        className="card"
-                        draggable={!isLocked}
-                        onDragStart={(e) => onDragStart(e, card.id)}
-                        title={isLocked ? "Locked (view-only)" : "Drag to move"}
-                      >
-                        <div className="cardTop">
-                          <div>
-                            <p className="name">{card.personName}</p>
-
-                            <div className="row">
-                              <span className="pill">Login: {card.login}</span>
-                              <span className="pill">Shift Co-Host: {card.shiftCoHost}</span>
-                              <span className="pill">Shift Pattern: {card.shiftPattern}</span>
-                            </div>
-
-                            <div className="row">
-                              <span className="badge bhd">Back Half Days</span>
-
-                              <span className="badge bhd">
-                                Role:&nbsp;
-                                <select
-                                  value={card.role}
-                                  disabled={isLocked}
-                                  onChange={(e) => updateCard(card.id, { role: e.target.value })}
-                                  style={{
-                                    padding: "6px 10px",
-                                    borderRadius: "999px",
-                                    border: "1px solid rgba(255,255,255,.18)",
-                                    background: "rgba(255,255,255,.08)",
-                                    color: "rgba(255,255,255,.92)",
-                                  }}
-                                  title="Select role"
-                                >
-                                  {ROLES.map((r) => (
-                                    <option key={r} value={r}>{r}</option>
-                                  ))}
-                                </select>
-                              </span>
-                            </div>
-
-                            <div className="small" style={{ marginTop: 8 }}>
-                              Permanent badge (system)
-                            </div>
+                          <div className="row">
+                            <span className="pill">Login: {card.login}</span>
+                            <span className="pill">Shift Co-Host: {card.shiftCoHost}</span>
+                            <span className="pill">Shift Pattern: {card.shiftPattern}</span>
                           </div>
 
-                          <div className="actions">
-                            <button className="iconBtn" disabled title="Permanent badge cannot be deleted">
-                              Locked
-                            </button>
+                          <div className="row">
+                            <span className="badge bhd">Back Half Days</span>
+
+                            <span className="badge bhd" title="Select role">
+                              Role:&nbsp;
+                              <select
+                                value={card.role}
+                                disabled={isLocked}
+                                onChange={(e) => updateCard(card.id, { role: e.target.value })}
+                                style={{
+                                  padding: "6px 10px",
+                                  borderRadius: "999px",
+                                  border: "1px solid rgba(255,255,255,.18)",
+                                  background: "rgba(255,255,255,.08)",
+                                  color: "rgba(255,255,255,.92)",
+                                }}
+                              >
+                                {ROLES.map((r) => (
+                                  <option key={r} value={r}>{r}</option>
+                                ))}
+                              </select>
+                            </span>
+                          </div>
+
+                          <div className="small" style={{ marginTop: 8 }}>
+                            Drag between columns when unlocked.
                           </div>
                         </div>
+
+                        <div className="actions">
+                          <button className="iconBtn" onClick={() => removeCard(card.id)} disabled={isLocked}>
+                            Delete
+                          </button>
+                        </div>
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </>
+              </div>
+            ))}
+          </div>
         );
       }
 
@@ -740,13 +733,13 @@
 
         return (
           <>
-            <div className="panel">
+            <div className="panel" style={{ marginTop: 14 }}>
               <h3>Add assignment</h3>
-              <div className="grid2">
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 <input value={course} onChange={(e) => setCourse(e.target.value)} placeholder="Class (e.g., BUS 240)" disabled={isLocked}/>
                 <input value={assignment} onChange={(e) => setAssignment(e.target.value)} placeholder="Assignment (e.g., Week 3 Discussion)" disabled={isLocked}/>
               </div>
-              <div className="formRow">
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 }}>
                 <input type="date" value={due} onChange={(e) => setDue(e.target.value)} disabled={isLocked}/>
                 <button className="primary" onClick={addAssignment} disabled={isLocked}>Add</button>
               </div>
@@ -793,7 +786,7 @@
                           </div>
                         </div>
 
-                        <div className="formRow" style={{ marginTop: 10 }}>
+                        <div className="row" style={{ marginTop: 10 }}>
                           <input value={card.course} onChange={(e) => updateCard(card.id, { course: e.target.value })} style={{ minWidth: 180 }} disabled={isLocked}/>
                           <input value={card.title} onChange={(e) => updateCard(card.id, { title: e.target.value })} style={{ minWidth: 220 }} disabled={isLocked}/>
                           <input
