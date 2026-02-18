@@ -46,6 +46,10 @@
         outline: none;
       }
       button { cursor: pointer; }
+      button.primary {
+        background: rgba(29,185,84,.15);
+        border-color: rgba(29,185,84,.35);
+      }
       button.danger {
         background: rgba(255,77,77,.12);
         border-color: rgba(255,77,77,.35);
@@ -225,7 +229,6 @@
         const [lastUpdated, setLastUpdated] = useState(() => localStorage.getItem("swb_lastUpdated") || nowStamp());
         const [toast, setToast] = useState("");
 
-        // PIN + lock per login
         const lockKey = useMemo(() => `swb_locked_${loginName || "anonymous"}`, [loginName]);
         const pinKey  = useMemo(() => `swb_pin_${loginName || "anonymous"}`, [loginName]);
         const [isLocked, setIsLocked] = useState(() => localStorage.getItem(lockKey) === "1");
@@ -247,7 +250,6 @@
           showToast._t = window.setTimeout(() => setToast(""), 1800);
         }
 
-        // Normal (movable/editable) seeded card
         function miguelCard() {
           return {
             id: "miguel-" + uid(),
@@ -269,7 +271,6 @@
           };
         }
 
-        // Load state + ensure Miguel exists; keep current col/role so dragging works
         useEffect(() => {
           const raw = localStorage.getItem(storageKey);
           const parsed = raw ? safeParse(raw, defaultState()) : defaultState();
@@ -284,7 +285,6 @@
           if (!hasMiguel) {
             parsed.staffing.cards = [miguelCard(), ...parsed.staffing.cards];
           } else {
-            // Update displayed info only (no "pill/circle" UI), but keep col/role untouched
             parsed.staffing.cards = parsed.staffing.cards.map((c) => {
               if (!(c && c.login === "migudavc" && (c.personName || "").toLowerCase().includes("miguel"))) return c;
               return {
@@ -572,7 +572,7 @@
 
                 <div className="dropZone">
                   {(cardsByCol[col.key] || []).length === 0 ? (
-                    <div className="hint">Drag the badge here (unlock first).</div>
+                    <div className="hint"></div>
                   ) : null}
 
                   {(cardsByCol[col.key] || []).map((card) => (
@@ -585,7 +585,6 @@
                     >
                       <div className="cardTop">
                         <div>
-                          {/* No circles/pills — plain text lines */}
                           <p className="name">{card.personName} ({card.login})</p>
                           <div className="subline">{card.shiftCoHost} - {card.shiftPattern}</div>
 
@@ -610,8 +609,6 @@
                               </select>
                             </span>
                           </div>
-
-                          <div className="small">Drag between columns when unlocked.</div>
                         </div>
 
                         <div className="actions">
@@ -735,7 +732,7 @@
                   </div>
 
                   <div className="dropZone">
-                    {(cardsByCol[col.key] || []).length === 0 ? <div className="hint">Drag cards here.</div> : null}
+                    {(cardsByCol[col.key] || []).length === 0 ? <div className="hint"></div> : null}
 
                     {(cardsByCol[col.key] || []).map((card) => (
                       <div
