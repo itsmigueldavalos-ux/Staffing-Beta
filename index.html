@@ -80,11 +80,11 @@
       .board {
         margin-top: 14px;
         display: grid;
-        grid-template-columns: 1.05fr repeat(4, 1fr);
+        grid-template-columns: repeat(4, 1fr);
         gap: 12px;
       }
       @media (max-width: 980px) {
-        .board { grid-template-columns: 1fr 1fr; }
+        .board { grid-template-columns: repeat(2, 1fr); }
       }
       @media (max-width: 560px) {
         .board { grid-template-columns: 1fr; }
@@ -174,14 +174,6 @@
         outline-offset: -2px;
         background: rgba(255,255,255,.04);
       }
-      .protectedTag {
-        font-size: 11px;
-        padding: 4px 8px;
-        border-radius: 999px;
-        border: 1px solid rgba(255,255,255,.18);
-        background: rgba(255,255,255,.08);
-        color: rgba(255,255,255,.8);
-      }
       .toast {
         position: fixed;
         left: 50%;
@@ -197,7 +189,6 @@
         max-width: 92vw;
       }
 
-      /* Simple modal */
       .modalBack {
         position: fixed; inset: 0;
         background: rgba(0,0,0,.55);
@@ -239,10 +230,7 @@
         "ICQA",
       ];
 
-      const BADGE_POOL_KEY = "badgePool";
-
       const STAFFING_COLS = [
-        { key: BADGE_POOL_KEY, title: "Badge Pool", protected: true },
         { key: "planned", title: "Planned" },
         { key: "onFloor", title: "On Floor" },
         { key: "break", title: "Break / Support" },
@@ -260,6 +248,7 @@
         const d = new Date();
         return d.toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" });
       };
+
       const nowStamp = () => new Date().toLocaleString();
       const uid = () => Math.random().toString(16).slice(2) + "-" + Math.random().toString(16).slice(2);
 
@@ -268,7 +257,7 @@
       }
 
       function App() {
-        const [loginName, setLoginName] = useState(() => localStorage.getItem("swb_login") || "");
+        const [loginName, setLoginName] = useState(() => localStorage.getItem("swb_login") || "migudavc");
         const [activeTab, setActiveTab] = useState("staffing");
         const [lastUpdated, setLastUpdated] = useState(() => localStorage.getItem("swb_lastUpdated") || nowStamp());
         const [toast, setToast] = useState("");
@@ -279,7 +268,6 @@
         const [isLocked, setIsLocked] = useState(() => localStorage.getItem(lockKey) === "1");
         const [pinSet, setPinSet] = useState(() => !!localStorage.getItem(pinKey));
 
-        // modal controls
         const [pinModal, setPinModal] = useState({ open: false, mode: "unlock" }); // unlock | setpin
         const [pinInput, setPinInput] = useState("");
         const [pinInput2, setPinInput2] = useState("");
@@ -296,46 +284,41 @@
           showToast._t = window.setTimeout(() => setToast(""), 1800);
         }
 
-        function defaultState() {
+        // ✅ Preloaded badge/card for Miguel Davalos
+        function seededMiguelCard() {
           return {
-            staffing: { cards: seedBadgePool([]) },
-            university: { cards: [] },
+            id: "seed-miguel-" + uid(),
+            personName: "Miguel Davalos",
+            dept: "Demora",
+            role: "Problem Solver",
+            bhd: true,
+            col: "planned",
+            createdBy: "migudavc",
+            createdAt: new Date().toISOString(),
           };
         }
 
-        function seedBadgePool(existingCards) {
-          const hasPool = existingCards.some(c => c.col === BADGE_POOL_KEY && c.isTemplate);
-          if (hasPool) return existingCards;
-
-          const templates = [];
-          const depts = ["Demora", "LaborShare"];
-          const bhdStates = [true, false];
-
-          for (const dept of depts) {
-            for (const role of ROLES) {
-              for (const bhd of bhdStates) {
-                templates.push({
-                  id: "tpl-" + uid(),
-                  isTemplate: true,
-                  personName: bhd ? "BHD Badge" : "Badge",
-                  dept,
-                  role,
-                  bhd,
-                  col: BADGE_POOL_KEY,
-                  createdBy: "system",
-                  createdAt: new Date().toISOString(),
-                });
-              }
-            }
-          }
-          return [...templates, ...existingCards];
+        function defaultState() {
+          return {
+            staffing: { cards: [seededMiguelCard()] },
+            university: { cards: [] },
+          };
         }
 
         useEffect(() => {
           const raw = localStorage.getItem(storageKey);
           if (raw) {
             const parsed = safeParse(raw, defaultState());
-            parsed.staffing.cards = seedBadgePool(parsed.staffing.cards || []);
+
+            // Ensure Miguel badge exists once per login
+            const hasMiguel = (parsed.staffing?.cards || []).some(
+              c => (c.createdBy === "migudavc" && c.personName === "Miguel Davalos" && c.dept === "Demora" && c.bhd === true)
+            );
+            if (!hasMiguel) {
+              parsed.staffing = parsed.staffing || { cards: [] };
+              parsed.staffing.cards = [seededMiguelCard(), ...(parsed.staffing.cards || [])];
+            }
+
             setState(parsed);
           } else {
             setState(defaultState());
@@ -344,14 +327,6 @@
         }, [storageKey]);
 
         function touchUpdate(nextState) {
-          nextState = {
-            ...nextState,
-            staffing: {
-              ...nextState.staffing,
-              cards: seedBadgePool(nextState.staffing.cards || []),
-            },
-          };
-
           setState(nextState);
           const stamp = nowStamp();
           setLastUpdated(stamp);
@@ -362,7 +337,6 @@
         useEffect(() => {
           localStorage.setItem("swb_login", loginName);
 
-          // refresh lock/pin per login when name changes
           const lk = localStorage.getItem(`swb_locked_${loginName || "anonymous"}`) === "1";
           const ps = !!localStorage.getItem(`swb_pin_${loginName || "anonymous"}`);
           setIsLocked(lk);
@@ -374,27 +348,23 @@
         }, [isLocked, lockKey]);
 
         function resetBoard() {
-          if (isLocked) { showToast("Board is locked (view-only). Unlock with PIN to clear."); return; }
+          if (isLocked) { showToast("Locked (view-only). Unlock with PIN to clear."); return; }
           touchUpdate(defaultState());
         }
 
         function openUnlock() {
-          // If no pin set yet, direct to set pin
           if (!pinSet) {
-            setPinInput("");
-            setPinInput2("");
+            setPinInput(""); setPinInput2("");
             setPinModal({ open: true, mode: "setpin" });
             return;
           }
-          setPinInput("");
-          setPinInput2("");
+          setPinInput(""); setPinInput2("");
           setPinModal({ open: true, mode: "unlock" });
         }
 
         function openSetPin() {
           if (isLocked) { showToast("Unlock with PIN before changing the PIN."); return; }
-          setPinInput("");
-          setPinInput2("");
+          setPinInput(""); setPinInput2("");
           setPinModal({ open: true, mode: "setpin" });
         }
 
@@ -423,7 +393,7 @@
         function setNewPin() {
           const p1 = (pinInput || "").trim();
           const p2 = (pinInput2 || "").trim();
-          if (p1.length < 4) { showToast("PIN must be at least 4 digits/characters."); return; }
+          if (p1.length < 4) { showToast("PIN must be at least 4 characters."); return; }
           if (p1 !== p2) { showToast("PINs do not match."); return; }
 
           localStorage.setItem(pinKey, p1);
@@ -452,7 +422,7 @@
                 <input
                   value={loginName}
                   onChange={(e) => setLoginName(e.target.value.trimStart())}
-                  placeholder="Enter login name (e.g., migueld)"
+                  placeholder="Enter login name (e.g., migudavc)"
                   style={{ minWidth: 240 }}
                 />
 
@@ -470,7 +440,7 @@
                   {pinSet ? "Change PIN" : "Set PIN"}
                 </button>
 
-                <button className="danger" onClick={resetBoard} title="Clears both boards for this login (pool remains)">
+                <button className="danger" onClick={resetBoard} title="Clears both boards for this login">
                   Clear Boards
                 </button>
               </div>
@@ -508,14 +478,6 @@
                 showToast={showToast}
               />
             )}
-
-            <div className="panel">
-              <h3>Security note</h3>
-              <div className="mutedLine">
-                This PIN is stored in the browser (localStorage) per login name. It’s a lightweight control to prevent accidental edits during stand-up,
-                not a secure authentication system.
-              </div>
-            </div>
 
             {toast ? <div className="toast">{toast}</div> : null}
 
@@ -563,7 +525,7 @@
                         <button className="primary" onClick={setNewPin}>Save PIN</button>
                       </div>
                       <div className="modalNote">
-                        Remember: this is stored locally in this browser profile.
+                        PIN is stored locally in this browser profile.
                       </div>
                     </>
                   )}
@@ -576,29 +538,25 @@
 
       function StaffingBoard({ data, onChange, loginName, showToast, isLocked }) {
         const [newName, setNewName] = useState("");
-
-        // Create-template form
-        const [tplDept, setTplDept] = useState("Demora");
-        const [tplRole, setTplRole] = useState(ROLES[0]);
-        const [tplBhd, setTplBhd] = useState(true);
-        const [tplLabel, setTplLabel] = useState("Badge");
+        const [dept, setDept] = useState("Demora");
+        const [role, setRole] = useState(ROLES[0]);
+        const [bhd, setBhd] = useState(true);
 
         const [dragOverCol, setDragOverCol] = useState(null);
 
         function blocked() { showToast("Locked (view-only). Unlock with PIN to edit."); }
 
-        function addPersonCard() {
+        function addCard() {
           if (isLocked) return blocked();
           const trimmed = newName.trim();
           if (!trimmed) return;
 
           const card = {
             id: uid(),
-            isTemplate: false,
             personName: trimmed,
-            dept: "Demora",
-            role: ROLES[0],
-            bhd: true,
+            dept,
+            role,
+            bhd,
             col: "planned",
             createdBy: loginName || "anonymous",
             createdAt: new Date().toISOString(),
@@ -607,28 +565,8 @@
           setNewName("");
         }
 
-        function createTemplate() {
-          if (isLocked) return blocked();
-          const label = (tplLabel || "").trim() || "Badge";
-          const template = {
-            id: "tpl-" + uid(),
-            isTemplate: true,
-            personName: label,
-            dept: tplDept,
-            role: tplRole,
-            bhd: tplBhd,
-            col: BADGE_POOL_KEY,
-            createdBy: "system",
-            createdAt: new Date().toISOString(),
-          };
-          onChange({ ...data, cards: [template, ...data.cards] });
-          showToast("Template created in Badge Pool.");
-        }
-
         function removeCard(id) {
           if (isLocked) return blocked();
-          const target = data.cards.find(c => c.id === id);
-          if (target?.isTemplate) return;
           onChange({ ...data, cards: data.cards.filter(c => c.id !== id) });
         }
 
@@ -657,39 +595,6 @@
           e.preventDefault();
           const cardId = e.dataTransfer.getData("text/plain");
           if (!cardId) return;
-
-          const card = data.cards.find(c => c.id === cardId);
-          if (!card) return;
-
-          // HARD-LOCK: no non-template cards into Badge Pool
-          if (colKey === BADGE_POOL_KEY && !card.isTemplate) {
-            showToast("Badge Pool is templates-only. Drop into another column.");
-            setDragOverCol(null);
-            return;
-          }
-
-          // Template from pool -> other column creates a copy
-          if (card.isTemplate && card.col === BADGE_POOL_KEY && colKey !== BADGE_POOL_KEY) {
-            const copy = {
-              ...card,
-              id: uid(),
-              isTemplate: false,
-              personName: "(assign name)",
-              col: colKey,
-              createdBy: loginName || "anonymous",
-              createdAt: new Date().toISOString(),
-            };
-            onChange({ ...data, cards: [copy, ...data.cards] });
-            setDragOverCol(null);
-            return;
-          }
-
-          // Keep templates in the pool (no-op if dropped back into pool)
-          if (card.isTemplate && card.col === BADGE_POOL_KEY && colKey === BADGE_POOL_KEY) {
-            setDragOverCol(null);
-            return;
-          }
-
           updateCard(cardId, { col: colKey });
           setDragOverCol(null);
         }
@@ -697,11 +602,8 @@
         const cardsByCol = useMemo(() => {
           const m = {};
           for (const col of STAFFING_COLS) m[col.key] = [];
-          for (const c of data.cards) {
+          for (const c of data.cards || []) {
             (m[c.col] || (m[c.col] = [])).push(c);
-          }
-          if (m[BADGE_POOL_KEY]) {
-            m[BADGE_POOL_KEY].sort((a,b) => (b.isTemplate === a.isTemplate) ? 0 : (b.isTemplate ? 1 : -1));
           }
           return m;
         }, [data.cards]);
@@ -709,29 +611,21 @@
         return (
           <>
             <div className="panel">
-              <h3>Add associate (people card)</h3>
+              <h3>Add associate</h3>
               <div className="formRow">
                 <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Associate name" style={{ minWidth: 240 }} disabled={isLocked}/>
-                <button className="primary" onClick={addPersonCard} disabled={isLocked}>Add</button>
-              </div>
-            </div>
-
-            <div className="panel">
-              <h3>Create badge template</h3>
-              <div className="formRow">
-                <input value={tplLabel} onChange={(e) => setTplLabel(e.target.value)} placeholder="Template label (e.g., BHD PS)" style={{ minWidth: 220 }} disabled={isLocked}/>
-                <select value={tplDept} onChange={(e) => setTplDept(e.target.value)} disabled={isLocked}>
+                <select value={dept} onChange={(e) => setDept(e.target.value)} disabled={isLocked}>
                   <option value="Demora">Demora</option>
                   <option value="LaborShare">LaborShare</option>
                 </select>
-                <select value={tplRole} onChange={(e) => setTplRole(e.target.value)} style={{ minWidth: 220 }} disabled={isLocked}>
+                <select value={role} onChange={(e) => setRole(e.target.value)} disabled={isLocked} style={{ minWidth: 220 }}>
                   {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
                 </select>
-                <select value={tplBhd ? "BHD" : "NotBHD"} onChange={(e) => setTplBhd(e.target.value === "BHD")} disabled={isLocked}>
+                <select value={bhd ? "BHD" : "NotBHD"} onChange={(e) => setBhd(e.target.value === "BHD")} disabled={isLocked}>
                   <option value="BHD">Back Half Days</option>
                   <option value="NotBHD">Not BHD</option>
                 </select>
-                <button className="primary" onClick={createTemplate} disabled={isLocked}>Create template</button>
+                <button className="primary" onClick={addCard} disabled={isLocked}>Add</button>
               </div>
             </div>
 
@@ -745,19 +639,12 @@
                   onDrop={(e) => onDrop(e, col.key)}
                 >
                   <div className="colHeader">
-                    <div style={{display:"flex", gap:8, alignItems:"center"}}>
-                      <h2 style={{margin:0}}>{col.title}</h2>
-                      {col.protected ? <span className="protectedTag">Templates only</span> : null}
-                    </div>
+                    <h2>{col.title}</h2>
                     <span>{(cardsByCol[col.key] || []).length}</span>
                   </div>
 
                   <div className="dropZone">
-                    {col.key === BADGE_POOL_KEY ? (
-                      <div className="hint">
-                        Drag templates from here onto the board to create copies. Normal cards cannot be dropped here.
-                      </div>
-                    ) : (cardsByCol[col.key] || []).length === 0 ? (
+                    {(cardsByCol[col.key] || []).length === 0 ? (
                       <div className="hint">Drag cards here.</div>
                     ) : null}
 
@@ -767,49 +654,36 @@
                         className="card"
                         draggable={!isLocked}
                         onDragStart={(e) => onDragStart(e, card.id)}
-                        title={isLocked ? "Locked (view-only)" : (card.isTemplate ? "Template (drag to create a copy)" : "Drag to move")}
+                        title={isLocked ? "Locked (view-only)" : "Drag to move"}
                       >
                         <div className="cardTop">
                           <div>
-                            <p className="name">
-                              {card.personName} {card.isTemplate ? <span className="protectedTag" style={{marginLeft:8}}>Template</span> : null}
-                            </p>
-
+                            <p className="name">{card.personName}</p>
                             <div className="row" style={{ marginTop: 8 }}>
                               <span className="pill">{card.dept}</span>
                               <span className={"badge " + (card.bhd ? "bhd" : "notbhd")}>
                                 {card.bhd ? "BHD" : "—"} • {card.role}
                               </span>
+                              <span className="pill">Login: {card.createdBy}</span>
                             </div>
-
                             <div className="small" style={{ marginTop: 8 }}>
-                              {card.isTemplate ? "System template" : <>Added by <strong>{card.createdBy}</strong></>}
+                              Added by <strong>{card.createdBy}</strong>
                             </div>
                           </div>
-
                           <div className="actions">
-                            {!card.isTemplate ? (
-                              <button className="iconBtn" onClick={() => removeCard(card.id)} disabled={isLocked}>Delete</button>
-                            ) : (
-                              <button className="iconBtn" disabled title="Templates cannot be deleted">Locked</button>
-                            )}
+                            <button className="iconBtn" onClick={() => removeCard(card.id)} disabled={isLocked}>Delete</button>
                           </div>
                         </div>
 
                         <div className="formRow" style={{ marginTop: 10 }}>
-                          {!card.isTemplate ? (
-                            <input value={card.personName} onChange={(e) => updateCard(card.id, { personName: e.target.value })} style={{ minWidth: 200 }} disabled={isLocked}/>
-                          ) : null}
-
+                          <input value={card.personName} onChange={(e) => updateCard(card.id, { personName: e.target.value })} style={{ minWidth: 200 }} disabled={isLocked}/>
                           <select value={card.dept} onChange={(e) => updateCard(card.id, { dept: e.target.value })} disabled={isLocked}>
                             <option value="Demora">Demora</option>
                             <option value="LaborShare">LaborShare</option>
                           </select>
-
-                          <select value={card.role} onChange={(e) => updateCard(card.id, { role: e.target.value })} style={{ minWidth: 220 }} disabled={isLocked}>
+                          <select value={card.role} onChange={(e) => updateCard(card.id, { role: e.target.value })} disabled={isLocked} style={{ minWidth: 220 }}>
                             {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
                           </select>
-
                           <select value={card.bhd ? "BHD" : "NotBHD"} onChange={(e) => updateCard(card.id, { bhd: e.target.value === "BHD" })} disabled={isLocked}>
                             <option value="BHD">Back Half Days</option>
                             <option value="NotBHD">Not BHD</option>
@@ -890,7 +764,7 @@
         const cardsByCol = useMemo(() => {
           const m = {};
           for (const col of UNI_COLS) m[col.key] = [];
-          for (const c of data.cards) {
+          for (const c of data.cards || []) {
             (m[c.col] || (m[c.col] = [])).push(c);
           }
           return m;
@@ -916,7 +790,7 @@
               </div>
             </div>
 
-            <div className="board" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
+            <div className="board">
               {UNI_COLS.map(col => (
                 <div
                   key={col.key}
@@ -949,9 +823,7 @@
                             <div className="row" style={{ marginTop: 8 }}>
                               <span className="pill">{card.course}</span>
                               <span className="pill">Due: {fmtDue(card.dueDate)}</span>
-                            </div>
-                            <div className="small" style={{ marginTop: 8 }}>
-                              Added by <strong>{card.createdBy}</strong>
+                              <span className="pill">Login: {card.createdBy}</span>
                             </div>
                           </div>
                           <div className="actions">
