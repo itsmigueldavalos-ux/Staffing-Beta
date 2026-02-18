@@ -18,106 +18,61 @@
         --shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
         --pill: rgba(255, 255, 255, 0.12);
       }
-      * {
-        box-sizing: border-box;
-      }
+      * { box-sizing: border-box; }
       body {
         margin: 0;
         font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
         background: radial-gradient(1200px 700px at 20% 0%, #15204a 0%, var(--bg) 55%);
         color: var(--text);
       }
-      .wrap {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 20px;
-      }
+      .wrap { max-width: 1200px; margin: 0 auto; padding: 20px; }
       .topbar {
-        display: flex;
-        gap: 12px;
-        align-items: center;
-        justify-content: space-between;
-        padding: 14px 16px;
-        border: 1px solid var(--border);
-        border-radius: 16px;
-        background: rgba(18, 26, 51, 0.78);
-        box-shadow: var(--shadow);
+        display: flex; gap: 12px; align-items: center; justify-content: space-between;
+        padding: 14px 16px; border: 1px solid var(--border); border-radius: 16px;
+        background: rgba(18,26,51,.78); box-shadow: var(--shadow);
         backdrop-filter: blur(8px);
       }
-      .title {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-      }
-      .title h1 {
-        font-size: 18px;
-        margin: 0;
-      }
-      .meta {
-        font-size: 12px;
-        color: var(--muted);
-        display: flex;
-        gap: 14px;
-        flex-wrap: wrap;
-      }
-      .controls {
-        display: flex;
-        gap: 10px;
-        align-items: center;
-        flex-wrap: wrap;
-        justify-content: flex-end;
-      }
-      input,
-      select,
-      button {
+      .title { display:flex; flex-direction: column; gap: 2px; }
+      .title h1 { font-size: 18px; margin: 0; }
+      .meta { font-size: 12px; color: var(--muted); display:flex; gap: 14px; flex-wrap: wrap; }
+      .controls { display:flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+
+      input, select, button {
         border: 1px solid var(--border);
-        background: rgba(255, 255, 255, 0.06);
+        background: rgba(255,255,255,.06);
         color: var(--text);
         border-radius: 12px;
         padding: 10px 12px;
         font-size: 14px;
         outline: none;
       }
-      input::placeholder {
-        color: rgba(255, 255, 255, 0.45);
-      }
-      button {
-        cursor: pointer;
-      }
+      button { cursor: pointer; }
       button.primary {
-        background: rgba(29, 185, 84, 0.15);
-        border-color: rgba(29, 185, 84, 0.35);
+        background: rgba(29,185,84,.15);
+        border-color: rgba(29,185,84,.35);
       }
       button.danger {
-        background: rgba(255, 77, 77, 0.12);
-        border-color: rgba(255, 77, 77, 0.35);
+        background: rgba(255,77,77,.12);
+        border-color: rgba(255,77,77,.35);
       }
       button.lock {
-        background: rgba(255, 176, 32, 0.14);
-        border-color: rgba(255, 176, 32, 0.35);
+        background: rgba(255,176,32,.14);
+        border-color: rgba(255,176,32,.35);
       }
       button.lock.active {
-        background: rgba(255, 77, 77, 0.14);
-        border-color: rgba(255, 77, 77, 0.35);
+        background: rgba(255,77,77,.14);
+        border-color: rgba(255,77,77,.35);
       }
 
-      .tabs {
-        margin-top: 14px;
-        display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
-      }
+      .tabs { margin-top: 14px; display: flex; gap: 10px; flex-wrap: wrap; }
       .tab {
         padding: 10px 12px;
         border-radius: 12px;
         border: 1px solid var(--border);
-        background: rgba(255, 255, 255, 0.06);
+        background: rgba(255,255,255,.06);
         cursor: pointer;
       }
-      .tab.active {
-        background: rgba(255, 255, 255, 0.12);
-        border-color: rgba(255, 255, 255, 0.2);
-      }
+      .tab.active { background: rgba(255,255,255,.12); border-color: rgba(255,255,255,.20); }
 
       .board {
         margin-top: 14px;
@@ -125,21 +80,13 @@
         grid-template-columns: repeat(4, 1fr);
         gap: 12px;
       }
-      @media (max-width: 980px) {
-        .board {
-          grid-template-columns: repeat(2, 1fr);
-        }
-      }
-      @media (max-width: 560px) {
-        .board {
-          grid-template-columns: 1fr;
-        }
-      }
+      @media (max-width: 980px) { .board { grid-template-columns: repeat(2, 1fr); } }
+      @media (max-width: 560px) { .board { grid-template-columns: 1fr; } }
 
       .col {
         border: 1px solid var(--border);
         border-radius: 16px;
-        background: rgba(18, 26, 51, 0.65);
+        background: rgba(18,26,51,.65);
         box-shadow: var(--shadow);
         min-height: 420px;
         display: flex;
@@ -149,131 +96,75 @@
       .colHeader {
         padding: 12px 12px 10px 12px;
         border-bottom: 1px solid var(--border);
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
+        display:flex; align-items:center; justify-content: space-between;
       }
-      .colHeader h2 {
-        margin: 0;
-        font-size: 14px;
-        letter-spacing: 0.2px;
-      }
-      .colHeader span {
-        font-size: 12px;
-        color: var(--muted);
-      }
-      .dropZone {
-        padding: 12px;
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-        flex: 1;
-      }
+      .colHeader h2 { margin: 0; font-size: 14px; letter-spacing: .2px; }
+      .colHeader span { font-size: 12px; color: var(--muted); }
+
+      .dropZone { padding: 12px; display:flex; flex-direction: column; gap: 10px; flex: 1; }
       .hint {
-        font-size: 12px;
-        color: rgba(255, 255, 255, 0.55);
-        border: 1px dashed rgba(255, 255, 255, 0.18);
+        font-size: 12px; color: rgba(255,255,255,.55);
+        border: 1px dashed rgba(255,255,255,.18);
         border-radius: 14px;
         padding: 10px 12px;
       }
+      .dragOver {
+        outline: 2px solid rgba(255,255,255,.22);
+        outline-offset: -2px;
+        background: rgba(255,255,255,.04);
+      }
+
       .card {
         border: 1px solid var(--border);
         border-radius: 16px;
         padding: 12px;
-        background: rgba(255, 255, 255, 0.06);
-        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.25);
+        background: rgba(255,255,255,.06);
+        box-shadow: 0 8px 18px rgba(0,0,0,.25);
       }
-      .row {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-        flex-wrap: wrap;
-      }
-      .cardTop {
-        display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
-        gap: 10px;
-      }
-      .name {
-        font-weight: 700;
-        font-size: 14px;
-        margin: 0;
-      }
-      .small {
-        font-size: 12px;
-        color: var(--muted);
-      }
+      .cardTop { display:flex; align-items:flex-start; justify-content: space-between; gap: 10px; }
+      .name { font-weight: 700; font-size: 14px; margin: 0; }
+      .small { font-size: 12px; color: var(--muted); }
+      .row { display:flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+
       .pill {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
+        display:inline-flex; align-items:center; gap: 6px;
         padding: 6px 10px;
         border-radius: 999px;
         background: var(--pill);
-        border: 1px solid rgba(255, 255, 255, 0.14);
+        border: 1px solid rgba(255,255,255,.14);
         font-size: 12px;
         white-space: nowrap;
       }
       .badge {
-        display: inline-flex;
-        align-items: center;
+        display:inline-flex;
+        align-items:center;
         gap: 8px;
         padding: 6px 10px;
         border-radius: 999px;
-        border: 1px solid rgba(255, 255, 255, 0.18);
+        border: 1px solid rgba(255,255,255,.18);
         font-size: 12px;
       }
       .badge.bhd {
-        background: rgba(29, 185, 84, 0.15);
-        border-color: rgba(29, 185, 84, 0.35);
+        background: rgba(29,185,84,.15);
+        border-color: rgba(29,185,84,.35);
       }
-      .badge.notbhd {
-        background: rgba(255, 255, 255, 0.08);
-      }
-      .actions {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-      }
-      .iconBtn {
-        padding: 8px 10px;
-        border-radius: 12px;
-        font-size: 12px;
-      }
-      .formRow {
-        display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
-        margin-top: 14px;
-      }
+
+      .actions { display:flex; gap: 8px; align-items: center; }
+      .iconBtn { padding: 8px 10px; border-radius: 12px; font-size: 12px; }
+
       .panel {
         margin-top: 14px;
         padding: 14px;
         border: 1px solid var(--border);
         border-radius: 16px;
-        background: rgba(18, 26, 51, 0.55);
+        background: rgba(18,26,51,.55);
         box-shadow: var(--shadow);
       }
-      .panel h3 {
-        margin: 0 0 10px 0;
-        font-size: 14px;
-      }
-      .grid2 {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 10px;
-      }
-      @media (max-width: 800px) {
-        .grid2 {
-          grid-template-columns: 1fr;
-        }
-      }
-      .dragOver {
-        outline: 2px solid rgba(255, 255, 255, 0.22);
-        outline-offset: -2px;
-        background: rgba(255, 255, 255, 0.04);
-      }
+      .panel h3 { margin: 0 0 10px 0; font-size: 14px; }
+      .grid2 { display:grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+      @media (max-width: 800px) { .grid2 { grid-template-columns: 1fr; } }
+      .formRow { display:flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+
       .toast {
         position: fixed;
         left: 50%;
@@ -281,18 +172,18 @@
         transform: translateX(-50%);
         padding: 10px 12px;
         border-radius: 14px;
-        border: 1px solid rgba(255, 255, 255, 0.18);
-        background: rgba(18, 26, 51, 0.9);
-        box-shadow: 0 14px 30px rgba(0, 0, 0, 0.4);
+        border: 1px solid rgba(255,255,255,.18);
+        background: rgba(18,26,51,.9);
+        box-shadow: 0 14px 30px rgba(0,0,0,.4);
         font-size: 13px;
-        color: rgba(255, 255, 255, 0.9);
+        color: rgba(255,255,255,.9);
         max-width: 92vw;
       }
 
+      /* Simple modal */
       .modalBack {
-        position: fixed;
-        inset: 0;
-        background: rgba(0, 0, 0, 0.55);
+        position: fixed; inset: 0;
+        background: rgba(0,0,0,.55);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -301,28 +192,15 @@
       .modal {
         width: 100%;
         max-width: 420px;
-        border: 1px solid rgba(255, 255, 255, 0.18);
+        border: 1px solid rgba(255,255,255,.18);
         border-radius: 18px;
-        background: rgba(18, 26, 51, 0.95);
-        box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55);
+        background: rgba(18,26,51,.95);
+        box-shadow: 0 18px 40px rgba(0,0,0,.55);
         padding: 14px;
       }
-      .modal h3 {
-        margin: 0 0 10px 0;
-        font-size: 15px;
-      }
-      .modalActions {
-        display: flex;
-        gap: 10px;
-        justify-content: flex-end;
-        margin-top: 12px;
-      }
-      .modalNote {
-        font-size: 12px;
-        color: rgba(255, 255, 255, 0.65);
-        margin-top: 8px;
-        line-height: 1.35;
-      }
+      .modal h3 { margin: 0 0 10px 0; font-size: 15px; }
+      .modalActions { display:flex; gap: 10px; justify-content: flex-end; margin-top: 12px; }
+      .modalNote { font-size: 12px; color: rgba(255,255,255,.65); margin-top: 8px; line-height: 1.35; }
     </style>
   </head>
 
@@ -361,34 +239,25 @@
 
       const todayStr = () => {
         const d = new Date();
-        return d.toLocaleDateString(undefined, {
-          weekday: "long",
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        });
+        return d.toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" });
       };
-
       const nowStamp = () => new Date().toLocaleString();
       const uid = () => Math.random().toString(16).slice(2) + "-" + Math.random().toString(16).slice(2);
 
       function safeParse(json, fallback) {
-        try {
-          return JSON.parse(json);
-        } catch {
-          return fallback;
-        }
+        try { return JSON.parse(json); } catch { return fallback; }
       }
 
       function App() {
+        // Keep login stored, but no placeholder text in the input
         const [loginName, setLoginName] = useState(() => localStorage.getItem("swb_login") || "migudavc");
         const [activeTab, setActiveTab] = useState("staffing");
         const [lastUpdated, setLastUpdated] = useState(() => localStorage.getItem("swb_lastUpdated") || nowStamp());
         const [toast, setToast] = useState("");
 
-        // PIN + lock (saved per login)
+        // PIN + lock per login
         const lockKey = useMemo(() => `swb_locked_${loginName || "anonymous"}`, [loginName]);
-        const pinKey = useMemo(() => `swb_pin_${loginName || "anonymous"}`, [loginName]);
+        const pinKey  = useMemo(() => `swb_pin_${loginName || "anonymous"}`, [loginName]);
         const [isLocked, setIsLocked] = useState(() => localStorage.getItem(lockKey) === "1");
         const [pinSet, setPinSet] = useState(() => !!localStorage.getItem(pinKey));
 
@@ -408,54 +277,53 @@
           showToast._t = window.setTimeout(() => setToast(""), 1800);
         }
 
-        // Seeded badge/card for Miguel Davalos
-        function seededMiguelCard() {
+        // ✅ Permanent Miguel badge
+        function miguelBadge() {
           return {
-            id: "seed-miguel-" + uid(),
+            id: "perm-miguel", // stable id
             personName: "Miguel Davalos",
-            dept: "Demora",
+            login: "migudavc",
+            shiftCoHost: "DB3T0700",
+            shiftPattern: "Back Half Days",
             role: "Problem Solver",
-            bhd: true,
             col: "planned",
-            createdBy: "migudavc",
+            createdBy: "system",
             createdAt: new Date().toISOString(),
+            isPermanent: true,
           };
         }
 
         function defaultState() {
           return {
-            staffing: { cards: [seededMiguelCard()] },
+            staffing: { cards: [miguelBadge()] },
             university: { cards: [] },
           };
         }
 
+        // Load state + enforce permanent Miguel badge
         useEffect(() => {
           const raw = localStorage.getItem(storageKey);
-          if (raw) {
-            const parsed = safeParse(raw, defaultState());
+          const parsed = raw ? safeParse(raw, defaultState()) : defaultState();
 
-            // Ensure Miguel badge exists (once per login)
-            const hasMiguel = (parsed.staffing?.cards || []).some(
-              (c) =>
-                c.createdBy === "migudavc" &&
-                c.personName === "Miguel Davalos" &&
-                c.dept === "Demora" &&
-                c.bhd === true
-            );
+          parsed.staffing = parsed.staffing || { cards: [] };
+          parsed.staffing.cards = Array.isArray(parsed.staffing.cards) ? parsed.staffing.cards : [];
 
-            if (!hasMiguel) {
-              parsed.staffing = parsed.staffing || { cards: [] };
-              parsed.staffing.cards = [seededMiguelCard(), ...(parsed.staffing.cards || [])];
-            }
+          // remove any duplicates and re-insert the permanent one
+          const kept = parsed.staffing.cards.filter(c => c && c.id !== "perm-miguel");
+          parsed.staffing.cards = [miguelBadge(), ...kept];
 
-            setState(parsed);
-          } else {
-            setState(defaultState());
-          }
+          setState(parsed);
           // eslint-disable-next-line react-hooks/exhaustive-deps
         }, [storageKey]);
 
         function touchUpdate(nextState) {
+          // Always re-enforce permanent badge on every save
+          nextState = nextState || defaultState();
+          nextState.staffing = nextState.staffing || { cards: [] };
+          const cards = Array.isArray(nextState.staffing.cards) ? nextState.staffing.cards : [];
+          const withoutMiguel = cards.filter(c => c && c.id !== "perm-miguel");
+          nextState.staffing.cards = [miguelBadge(), ...withoutMiguel];
+
           setState(nextState);
           const stamp = nowStamp();
           setLastUpdated(stamp);
@@ -465,7 +333,6 @@
 
         useEffect(() => {
           localStorage.setItem("swb_login", loginName);
-
           const lk = localStorage.getItem(`swb_locked_${loginName || "anonymous"}`) === "1";
           const ps = !!localStorage.getItem(`swb_pin_${loginName || "anonymous"}`);
           setIsLocked(lk);
@@ -477,32 +344,23 @@
         }, [isLocked, lockKey]);
 
         function resetBoard() {
-          if (isLocked) {
-            showToast("Locked (view-only). Unlock with PIN to clear.");
-            return;
-          }
+          if (isLocked) { showToast("Locked (view-only). Unlock with PIN to clear."); return; }
           touchUpdate(defaultState());
         }
 
         function openUnlock() {
           if (!pinSet) {
-            setPinInput("");
-            setPinInput2("");
+            setPinInput(""); setPinInput2("");
             setPinModal({ open: true, mode: "setpin" });
             return;
           }
-          setPinInput("");
-          setPinInput2("");
+          setPinInput(""); setPinInput2("");
           setPinModal({ open: true, mode: "unlock" });
         }
 
         function openSetPin() {
-          if (isLocked) {
-            showToast("Unlock with PIN before changing the PIN.");
-            return;
-          }
-          setPinInput("");
-          setPinInput2("");
+          if (isLocked) { showToast("Unlock with PIN before changing the PIN."); return; }
+          setPinInput(""); setPinInput2("");
           setPinModal({ open: true, mode: "setpin" });
         }
 
@@ -531,20 +389,12 @@
         function setNewPin() {
           const p1 = (pinInput || "").trim();
           const p2 = (pinInput2 || "").trim();
-          if (p1.length < 4) {
-            showToast("PIN must be at least 4 characters.");
-            return;
-          }
-          if (p1 !== p2) {
-            showToast("PINs do not match.");
-            return;
-          }
-
+          if (p1.length < 4) { showToast("PIN must be at least 4 characters."); return; }
+          if (p1 !== p2) { showToast("PINs do not match."); return; }
           localStorage.setItem(pinKey, p1);
           setPinSet(true);
           setPinModal({ open: false, mode: "setpin" });
-          setPinInput("");
-          setPinInput2("");
+          setPinInput(""); setPinInput2("");
           showToast("PIN set.");
         }
 
@@ -556,18 +406,10 @@
               <div className="title">
                 <h1>Staffing Digital Whiteboard</h1>
                 <div className="meta">
-                  <span>
-                    <strong>Today:</strong> {todayStr()}
-                  </span>
-                  <span>
-                    <strong>Last Updated:</strong> {lastUpdated}
-                  </span>
-                  <span>
-                    <strong>Login Name:</strong> {loginName ? loginName : "Not set"}
-                  </span>
-                  <span>
-                    <strong>Status:</strong> {isLocked ? "Locked (view-only)" : "Unlocked"}
-                  </span>
+                  <span><strong>Today:</strong> {todayStr()}</span>
+                  <span><strong>Last Updated:</strong> {lastUpdated}</span>
+                  <span><strong>Login Name:</strong> {loginName ? loginName : "Not set"}</span>
+                  <span><strong>Status:</strong> {isLocked ? "Locked (view-only)" : "Unlocked"}</span>
                 </div>
               </div>
 
@@ -593,8 +435,8 @@
                   {pinSet ? "Change PIN" : "Set PIN"}
                 </button>
 
-                <button className="danger" onClick={resetBoard} title="Clears both boards for this login">
-                  Clear Boards
+                <button className="danger" onClick={resetBoard} title="Resets boards (Miguel badge stays)">
+                  Reset Boards
                 </button>
               </div>
             </div>
@@ -603,10 +445,7 @@
               <div className={"tab " + (activeTab === "staffing" ? "active" : "")} onClick={() => setActiveTab("staffing")}>
                 Staffing Board
               </div>
-              <div
-                className={"tab " + (activeTab === "university" ? "active" : "")}
-                onClick={() => setActiveTab("university")}
-              >
+              <div className={"tab " + (activeTab === "university" ? "active" : "")} onClick={() => setActiveTab("university")}>
                 University Assignments
               </div>
             </div>
@@ -615,13 +454,9 @@
               <StaffingBoard
                 data={state.staffing}
                 onChange={(nextStaffing) => {
-                  if (isLocked) {
-                    showToast("Locked (view-only). Unlock with PIN to edit.");
-                    return;
-                  }
+                  if (isLocked) { showToast("Locked (view-only). Unlock with PIN to edit."); return; }
                   touchUpdate({ ...state, staffing: nextStaffing });
                 }}
-                loginName={loginName}
                 showToast={showToast}
                 isLocked={isLocked}
               />
@@ -629,10 +464,7 @@
               <UniversityBoard
                 data={state.university}
                 onChange={(nextUni) => {
-                  if (isLocked) {
-                    showToast("Locked (view-only). Unlock with PIN to edit.");
-                    return;
-                  }
+                  if (isLocked) { showToast("Locked (view-only). Unlock with PIN to edit."); return; }
                   touchUpdate({ ...state, university: nextUni });
                 }}
                 loginName={loginName}
@@ -658,9 +490,7 @@
                       />
                       <div className="modalActions">
                         <button onClick={() => setPinModal({ ...pinModal, open: false })}>Cancel</button>
-                        <button className="primary" onClick={tryUnlock}>
-                          Unlock
-                        </button>
+                        <button className="primary" onClick={tryUnlock}>Unlock</button>
                       </div>
                       <div className="modalNote">If you don’t know the PIN, the board stays view-only.</div>
                     </>
@@ -684,9 +514,7 @@
                       />
                       <div className="modalActions">
                         <button onClick={() => setPinModal({ ...pinModal, open: false })}>Cancel</button>
-                        <button className="primary" onClick={setNewPin}>
-                          Save PIN
-                        </button>
+                        <button className="primary" onClick={setNewPin}>Save PIN</button>
                       </div>
                       <div className="modalNote">PIN is stored locally in this browser profile.</div>
                     </>
@@ -698,41 +526,10 @@
         );
       }
 
-      function StaffingBoard({ data, onChange, loginName, showToast, isLocked }) {
-        const [newName, setNewName] = useState("");
-        const [dept, setDept] = useState("Demora");
-        const [role, setRole] = useState(ROLES[0]);
-        const [bhd, setBhd] = useState(true);
-
+      function StaffingBoard({ data, onChange, showToast, isLocked }) {
         const [dragOverCol, setDragOverCol] = useState(null);
 
-        function blocked() {
-          showToast("Locked (view-only). Unlock with PIN to edit.");
-        }
-
-        function addCard() {
-          if (isLocked) return blocked();
-          const trimmed = newName.trim();
-          if (!trimmed) return;
-
-          const card = {
-            id: uid(),
-            personName: trimmed,
-            dept,
-            role,
-            bhd,
-            col: "planned",
-            createdBy: loginName || "anonymous",
-            createdAt: new Date().toISOString(),
-          };
-          onChange({ ...data, cards: [card, ...(data.cards || [])] });
-          setNewName("");
-        }
-
-        function removeCard(id) {
-          if (isLocked) return blocked();
-          onChange({ ...data, cards: (data.cards || []).filter((c) => c.id !== id) });
-        }
+        function blocked() { showToast("Locked (view-only). Unlock with PIN to edit."); }
 
         function updateCard(id, patch) {
           if (isLocked) return blocked();
@@ -743,11 +540,7 @@
         }
 
         function onDragStart(e, cardId) {
-          if (isLocked) {
-            e.preventDefault();
-            blocked();
-            return;
-          }
+          if (isLocked) { e.preventDefault(); blocked(); return; }
           e.dataTransfer.setData("text/plain", cardId);
           e.dataTransfer.effectAllowed = "move";
         }
@@ -779,33 +572,9 @@
         return (
           <>
             <div className="panel">
-              <h3>Add associate</h3>
-              <div className="formRow">
-                <input
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  placeholder="Associate name"
-                  style={{ minWidth: 240 }}
-                  disabled={isLocked}
-                />
-                <select value={dept} onChange={(e) => setDept(e.target.value)} disabled={isLocked}>
-                  <option value="Demora">Demora</option>
-                  <option value="LaborShare">LaborShare</option>
-                </select>
-                <select value={role} onChange={(e) => setRole(e.target.value)} disabled={isLocked} style={{ minWidth: 220 }}>
-                  {ROLES.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
-                    </option>
-                  ))}
-                </select>
-                <select value={bhd ? "BHD" : "NotBHD"} onChange={(e) => setBhd(e.target.value === "BHD")} disabled={isLocked}>
-                  <option value="BHD">Back Half Days</option>
-                  <option value="NotBHD">Not BHD</option>
-                </select>
-                <button className="primary" onClick={addCard} disabled={isLocked}>
-                  Add
-                </button>
+              <h3>Permanent Badge</h3>
+              <div style={{ fontSize: 12, color: "rgba(255,255,255,.72)" }}>
+                This staffing badge is permanent and cannot be deleted. You can drag it between columns (when unlocked) and select the role.
               </div>
             </div>
 
@@ -814,10 +583,7 @@
                 <div
                   key={col.key}
                   className={"col " + (!isLocked && dragOverCol === col.key ? "dragOver" : "")}
-                  onDragOver={(e) => {
-                    allowDrop(e);
-                    if (!isLocked) setDragOverCol(col.key);
-                  }}
+                  onDragOver={(e) => { allowDrop(e); if (!isLocked) setDragOverCol(col.key); }}
                   onDragLeave={() => setDragOverCol(null)}
                   onDrop={(e) => onDrop(e, col.key)}
                 >
@@ -827,96 +593,66 @@
                   </div>
 
                   <div className="dropZone">
-                    {(cardsByCol[col.key] || []).length === 0 ? <div className="hint">Drag cards here.</div> : null}
+                    {(cardsByCol[col.key] || []).length === 0 ? (
+                      <div className="hint">Drag badge here.</div>
+                    ) : null}
 
-                    {(cardsByCol[col.key] || []).map((card) => {
-                      const isMiguel = card.personName === "Miguel Davalos" && card.createdBy === "migudavc";
+                    {(cardsByCol[col.key] || []).map((card) => (
+                      <div
+                        key={card.id}
+                        className="card"
+                        draggable={!isLocked}
+                        onDragStart={(e) => onDragStart(e, card.id)}
+                        title={isLocked ? "Locked (view-only)" : "Drag to move"}
+                      >
+                        <div className="cardTop">
+                          <div>
+                            <p className="name">{card.personName}</p>
 
-                      return (
-                        <div
-                          key={card.id}
-                          className="card"
-                          draggable={!isLocked}
-                          onDragStart={(e) => onDragStart(e, card.id)}
-                          title={isLocked ? "Locked (view-only)" : "Drag to move"}
-                        >
-                          <div className="cardTop">
-                            <div>
-                              <p className="name">{card.personName}</p>
-
-                              <div className="row" style={{ marginTop: 8 }}>
-                                <span className="pill">{card.dept}</span>
-
-                                {isMiguel ? (
-                                  <span className={"badge " + (card.bhd ? "bhd" : "notbhd")}>
-                                    {card.bhd ? "BHD" : "—"} •
-                                    <select
-                                      value={card.role}
-                                      disabled={isLocked}
-                                      onChange={(e) => updateCard(card.id, { role: e.target.value })}
-                                      style={{
-                                        padding: "6px 10px",
-                                        borderRadius: "999px",
-                                        border: "1px solid rgba(255,255,255,.18)",
-                                        background: "rgba(255,255,255,.08)",
-                                        color: "rgba(255,255,255,.92)",
-                                      }}
-                                      title="Select Miguel’s role"
-                                    >
-                                      {ROLES.map((r) => (
-                                        <option key={r} value={r}>
-                                          {r}
-                                        </option>
-                                      ))}
-                                    </select>
-                                  </span>
-                                ) : (
-                                  <span className={"badge " + (card.bhd ? "bhd" : "notbhd")}>
-                                    {card.bhd ? "BHD" : "—"} • {card.role}
-                                  </span>
-                                )}
-
-                                <span className="pill">Login: {card.createdBy}</span>
-                              </div>
-
-                              <div className="small" style={{ marginTop: 8 }}>
-                                Added by <strong>{card.createdBy}</strong>
-                              </div>
+                            <div className="row">
+                              <span className="pill">Login: {card.login}</span>
+                              <span className="pill">Shift Co-Host: {card.shiftCoHost}</span>
+                              <span className="pill">Shift Pattern: {card.shiftPattern}</span>
                             </div>
 
-                            <div className="actions">
-                              <button className="iconBtn" onClick={() => removeCard(card.id)} disabled={isLocked}>
-                                Delete
-                              </button>
+                            <div className="row">
+                              <span className="badge bhd">Back Half Days</span>
+
+                              <span className="badge bhd">
+                                Role:&nbsp;
+                                <select
+                                  value={card.role}
+                                  disabled={isLocked}
+                                  onChange={(e) => updateCard(card.id, { role: e.target.value })}
+                                  style={{
+                                    padding: "6px 10px",
+                                    borderRadius: "999px",
+                                    border: "1px solid rgba(255,255,255,.18)",
+                                    background: "rgba(255,255,255,.08)",
+                                    color: "rgba(255,255,255,.92)",
+                                  }}
+                                  title="Select role"
+                                >
+                                  {ROLES.map((r) => (
+                                    <option key={r} value={r}>{r}</option>
+                                  ))}
+                                </select>
+                              </span>
+                            </div>
+
+                            <div className="small" style={{ marginTop: 8 }}>
+                              Permanent badge (system)
                             </div>
                           </div>
 
-                          <div className="formRow" style={{ marginTop: 10 }}>
-                            <input
-                              value={card.personName}
-                              onChange={(e) => updateCard(card.id, { personName: e.target.value })}
-                              style={{ minWidth: 200 }}
-                              disabled={isLocked}
-                            />
-                            <select value={card.dept} onChange={(e) => updateCard(card.id, { dept: e.target.value })} disabled={isLocked}>
-                              <option value="Demora">Demora</option>
-                              <option value="LaborShare">LaborShare</option>
-                            </select>
-                            <select value={card.role} onChange={(e) => updateCard(card.id, { role: e.target.value })} disabled={isLocked} style={{ minWidth: 220 }}>
-                              {ROLES.map((r) => (
-                                <option key={r} value={r}>
-                                  {r}
-                                </option>
-                              ))}
-                            </select>
-                            <select value={card.bhd ? "BHD" : "NotBHD"} onChange={(e) => updateCard(card.id, { bhd: e.target.value === "BHD" })} disabled={isLocked}>
-                              <option value="BHD">Back Half Days</option>
-                              <option value="NotBHD">Not BHD</option>
-                            </select>
+                          <div className="actions">
+                            <button className="iconBtn" disabled title="Permanent badge cannot be deleted">
+                              Locked
+                            </button>
                           </div>
                         </div>
-                      );
-                    })}
+                      </div>
+                    ))}
                   </div>
                 </div>
               ))}
@@ -931,9 +667,7 @@
         const [due, setDue] = useState("");
         const [dragOverCol, setDragOverCol] = useState(null);
 
-        function blocked() {
-          showToast("Locked (view-only). Unlock with PIN to edit.");
-        }
+        function blocked() { showToast("Locked (view-only). Unlock with PIN to edit."); }
 
         function addAssignment() {
           if (isLocked) return blocked();
@@ -969,11 +703,7 @@
         }
 
         function onDragStart(e, cardId) {
-          if (isLocked) {
-            e.preventDefault();
-            blocked();
-            return;
-          }
+          if (isLocked) { e.preventDefault(); blocked(); return; }
           e.dataTransfer.setData("text/plain", cardId);
           e.dataTransfer.effectAllowed = "move";
         }
@@ -1013,19 +743,12 @@
             <div className="panel">
               <h3>Add assignment</h3>
               <div className="grid2">
-                <input value={course} onChange={(e) => setCourse(e.target.value)} placeholder="Class (e.g., BUS 240)" disabled={isLocked} />
-                <input
-                  value={assignment}
-                  onChange={(e) => setAssignment(e.target.value)}
-                  placeholder="Assignment (e.g., Week 3 Discussion)"
-                  disabled={isLocked}
-                />
+                <input value={course} onChange={(e) => setCourse(e.target.value)} placeholder="Class (e.g., BUS 240)" disabled={isLocked}/>
+                <input value={assignment} onChange={(e) => setAssignment(e.target.value)} placeholder="Assignment (e.g., Week 3 Discussion)" disabled={isLocked}/>
               </div>
               <div className="formRow">
-                <input type="date" value={due} onChange={(e) => setDue(e.target.value)} disabled={isLocked} />
-                <button className="primary" onClick={addAssignment} disabled={isLocked}>
-                  Add
-                </button>
+                <input type="date" value={due} onChange={(e) => setDue(e.target.value)} disabled={isLocked}/>
+                <button className="primary" onClick={addAssignment} disabled={isLocked}>Add</button>
               </div>
             </div>
 
@@ -1034,10 +757,7 @@
                 <div
                   key={col.key}
                   className={"col " + (!isLocked && dragOverCol === col.key ? "dragOver" : "")}
-                  onDragOver={(e) => {
-                    allowDrop(e);
-                    if (!isLocked) setDragOverCol(col.key);
-                  }}
+                  onDragOver={(e) => { allowDrop(e); if (!isLocked) setDragOverCol(col.key); }}
                   onDragLeave={() => setDragOverCol(null)}
                   onDrop={(e) => onDrop(e, col.key)}
                 >
@@ -1060,7 +780,7 @@
                         <div className="cardTop">
                           <div>
                             <p className="name">{card.title}</p>
-                            <div className="row" style={{ marginTop: 8 }}>
+                            <div className="row">
                               <span className="pill">{card.course}</span>
                               <span className="pill">Due: {fmtDue(card.dueDate)}</span>
                               <span className="pill">Login: {card.createdBy}</span>
@@ -1074,24 +794,12 @@
                         </div>
 
                         <div className="formRow" style={{ marginTop: 10 }}>
-                          <input
-                            value={card.course}
-                            onChange={(e) => updateCard(card.id, { course: e.target.value })}
-                            style={{ minWidth: 180 }}
-                            disabled={isLocked}
-                          />
-                          <input
-                            value={card.title}
-                            onChange={(e) => updateCard(card.id, { title: e.target.value })}
-                            style={{ minWidth: 220 }}
-                            disabled={isLocked}
-                          />
+                          <input value={card.course} onChange={(e) => updateCard(card.id, { course: e.target.value })} style={{ minWidth: 180 }} disabled={isLocked}/>
+                          <input value={card.title} onChange={(e) => updateCard(card.id, { title: e.target.value })} style={{ minWidth: 220 }} disabled={isLocked}/>
                           <input
                             type="date"
-                            value={card.dueDate ? new Date(card.dueDate).toISOString().slice(0, 10) : ""}
-                            onChange={(e) =>
-                              updateCard(card.id, { dueDate: e.target.value ? new Date(e.target.value).toISOString() : null })
-                            }
+                            value={card.dueDate ? new Date(card.dueDate).toISOString().slice(0,10) : ""}
+                            onChange={(e) => updateCard(card.id, { dueDate: e.target.value ? new Date(e.target.value).toISOString() : null })}
                             disabled={isLocked}
                           />
                         </div>
