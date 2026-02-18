@@ -5,10 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Staffing Whiteboard</title>
 
-    <!-- React (CDN) -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <!-- Babel to run JSX directly in the browser (fine for an internal tool / small app) -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
     <style>
@@ -19,9 +17,6 @@
         --text: rgba(255,255,255,.92);
         --border: rgba(255,255,255,.12);
         --shadow: 0 10px 25px rgba(0,0,0,.35);
-        --good: #1db954;
-        --warn: #ffb020;
-        --bad: #ff4d4d;
         --pill: rgba(255,255,255,.12);
       }
       * { box-sizing: border-box; }
@@ -38,9 +33,7 @@
         background: rgba(18,26,51,.78); box-shadow: var(--shadow);
         backdrop-filter: blur(8px);
       }
-      .title {
-        display:flex; flex-direction: column; gap: 2px;
-      }
+      .title { display:flex; flex-direction: column; gap: 2px; }
       .title h1 { font-size: 18px; margin: 0; }
       .meta { font-size: 12px; color: var(--muted); display:flex; gap: 14px; flex-wrap: wrap; }
       .controls { display:flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
@@ -63,10 +56,7 @@
         background: rgba(255,77,77,.12);
         border-color: rgba(255,77,77,.35);
       }
-      .tabs {
-        margin-top: 14px;
-        display: flex; gap: 10px; flex-wrap: wrap;
-      }
+      .tabs { margin-top: 14px; display: flex; gap: 10px; flex-wrap: wrap; }
       .tab {
         padding: 10px 12px;
         border-radius: 12px;
@@ -82,11 +72,11 @@
       .board {
         margin-top: 14px;
         display: grid;
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: 1.05fr repeat(4, 1fr);
         gap: 12px;
       }
       @media (max-width: 980px) {
-        .board { grid-template-columns: repeat(2, 1fr); }
+        .board { grid-template-columns: 1fr 1fr; }
       }
       @media (max-width: 560px) {
         .board { grid-template-columns: 1fr; }
@@ -131,11 +121,7 @@
       }
       .row { display:flex; gap: 8px; align-items: center; flex-wrap: wrap; }
       .cardTop { display:flex; align-items:flex-start; justify-content: space-between; gap: 10px; }
-      .name {
-        font-weight: 700;
-        font-size: 14px;
-        margin: 0;
-      }
+      .name { font-weight: 700; font-size: 14px; margin: 0; }
       .small { font-size: 12px; color: var(--muted); }
       .pill {
         display:inline-flex; align-items:center; gap: 6px;
@@ -159,15 +145,9 @@
         background: rgba(29,185,84,.15);
         border-color: rgba(29,185,84,.35);
       }
-      .badge.notbhd {
-        background: rgba(255,255,255,.08);
-      }
+      .badge.notbhd { background: rgba(255,255,255,.08); }
       .actions { display:flex; gap: 8px; align-items: center; }
-      .iconBtn {
-        padding: 8px 10px;
-        border-radius: 12px;
-        font-size: 12px;
-      }
+      .iconBtn { padding: 8px 10px; border-radius: 12px; font-size: 12px; }
       .formRow { display:flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
       .panel {
         margin-top: 14px;
@@ -186,13 +166,21 @@
         outline-offset: -2px;
         background: rgba(255,255,255,.04);
       }
+      .protectedTag {
+        font-size: 11px;
+        padding: 4px 8px;
+        border-radius: 999px;
+        border: 1px solid rgba(255,255,255,.18);
+        background: rgba(255,255,255,.08);
+        color: rgba(255,255,255,.8);
+      }
     </style>
   </head>
   <body>
     <div id="root"></div>
 
     <script type="text/babel">
-      const { useEffect, useMemo, useRef, useState } = React;
+      const { useEffect, useMemo, useState } = React;
 
       const ROLES = [
         "Problem Solver",
@@ -207,7 +195,11 @@
         "ICQA",
       ];
 
+      // Special protected badge pool column key:
+      const BADGE_POOL_KEY = "badgePool";
+
       const STAFFING_COLS = [
+        { key: BADGE_POOL_KEY, title: "Badge Pool", protected: true },
         { key: "planned", title: "Planned" },
         { key: "onFloor", title: "On Floor" },
         { key: "break", title: "Break / Support" },
@@ -227,7 +219,6 @@
       };
 
       const nowStamp = () => new Date().toLocaleString();
-
       const uid = () => Math.random().toString(16).slice(2) + "-" + Math.random().toString(16).slice(2);
 
       function safeParse(json, fallback) {
@@ -235,42 +226,78 @@
       }
 
       function App() {
-        // Simple "login name" (local only, stored in localStorage)
         const [loginName, setLoginName] = useState(() => localStorage.getItem("swb_login") || "");
-        const [activeTab, setActiveTab] = useState("staffing"); // staffing | university
+        const [activeTab, setActiveTab] = useState("staffing");
         const [lastUpdated, setLastUpdated] = useState(() => localStorage.getItem("swb_lastUpdated") || nowStamp());
 
-        const storageKey = useMemo(() => `swb_state_${loginName || "anonymous"}`, [loginName]);
-
-        // Load state per login
+        const storageKey = React.useMemo(() => `swb_state_${loginName || "anonymous"}`, [loginName]);
         const [state, setState] = useState(() => {
           const raw = localStorage.getItem(storageKey);
           return raw ? safeParse(raw, null) : null;
         });
 
-        // Initialize if none
+        function defaultState() {
+          return {
+            staffing: {
+              cards: seedBadgePool([]), // ensure pool exists
+            },
+            university: { cards: [] },
+          };
+        }
+
+        // Seed the protected pool with one badge per role (both depts x BHD options)
+        function seedBadgePool(existingCards) {
+          const hasPool = existingCards.some(c => c.col === BADGE_POOL_KEY && c.isTemplate);
+          if (hasPool) return existingCards;
+
+          const templates = [];
+          const depts = ["Demora", "LaborShare"];
+          const bhdStates = [true, false];
+
+          for (const dept of depts) {
+            for (const role of ROLES) {
+              for (const bhd of bhdStates) {
+                templates.push({
+                  id: "tpl-" + uid(),
+                  isTemplate: true,
+                  personName: bhd ? "BHD Badge" : "Badge",
+                  dept,
+                  role,
+                  bhd,
+                  col: BADGE_POOL_KEY,
+                  createdBy: "system",
+                  createdAt: new Date().toISOString(),
+                });
+              }
+            }
+          }
+
+          return [...templates, ...existingCards];
+        }
+
         useEffect(() => {
           const raw = localStorage.getItem(storageKey);
           if (raw) {
-            setState(safeParse(raw, defaultState()));
+            const parsed = safeParse(raw, defaultState());
+            // make sure the pool templates exist even if user had older state
+            parsed.staffing.cards = seedBadgePool(parsed.staffing.cards || []);
+            setState(parsed);
           } else {
             setState(defaultState());
           }
           // eslint-disable-next-line react-hooks/exhaustive-deps
         }, [storageKey]);
 
-        function defaultState() {
-          return {
+        function touchUpdate(nextState) {
+          // Always keep badge pool templates present
+          nextState = {
+            ...nextState,
             staffing: {
-              cards: [],
-            },
-            university: {
-              cards: [],
+              ...nextState.staffing,
+              cards: seedBadgePool(nextState.staffing.cards || []),
             },
           };
-        }
 
-        function touchUpdate(nextState) {
           setState(nextState);
           const stamp = nowStamp();
           setLastUpdated(stamp);
@@ -278,13 +305,9 @@
           localStorage.setItem(storageKey, JSON.stringify(nextState));
         }
 
-        // Persist loginName
         useEffect(() => {
           localStorage.setItem("swb_login", loginName);
         }, [loginName]);
-
-        // If no login name, still allow use, but encourage setting it
-        const canUse = true;
 
         function resetBoard() {
           touchUpdate(defaultState());
@@ -311,7 +334,7 @@
                   placeholder="Enter login name (e.g., migueld)"
                   style={{ minWidth: 240 }}
                 />
-                <button className="danger" onClick={resetBoard} title="Clears both boards for this login">
+                <button className="danger" onClick={resetBoard} title="Clears both boards for this login (pool remains)">
                   Clear Boards
                 </button>
               </div>
@@ -330,47 +353,45 @@
               <StaffingBoard
                 data={state.staffing}
                 onChange={(nextStaffing) => touchUpdate({ ...state, staffing: nextStaffing })}
-                canUse={canUse}
                 loginName={loginName}
               />
             ) : (
               <UniversityBoard
                 data={state.university}
                 onChange={(nextUni) => touchUpdate({ ...state, university: nextUni })}
-                canUse={canUse}
                 loginName={loginName}
               />
             )}
 
             <div className="panel">
-              <h3>Notes</h3>
+              <h3>How the protected Badge Pool works</h3>
               <div className="mutedLine">
-                • This app intentionally has <strong>no Import/Export JSON</strong>. Data is saved automatically in your browser (localStorage) per login name.<br/>
-                • “Last Updated” changes whenever you add/move/edit/delete a card—meant to match real-life staffing changes.
+                • Anything in <strong>Badge Pool</strong> is a <strong>template</strong> and cannot be deleted.<br/>
+                • Drag a template from the pool into any other column to <strong>create a copy</strong> (the pool stays intact).<br/>
+                • This lets you keep “badge types” always available while staffing cards on the board can be removed.
               </div>
             </div>
           </div>
         );
       }
 
-      function StaffingBoard({ data, onChange, canUse, loginName }) {
+      function StaffingBoard({ data, onChange, loginName }) {
         const [newName, setNewName] = useState("");
-        const [dept, setDept] = useState("Demora");
-        const [role, setRole] = useState(ROLES[0]);
-        const [bhd, setBhd] = useState(true);
 
         const [dragOverCol, setDragOverCol] = useState(null);
 
-        function addCard() {
+        function addPersonCard() {
           const trimmed = newName.trim();
           if (!trimmed) return;
 
+          // Default new card settings (you can edit after)
           const card = {
             id: uid(),
+            isTemplate: false,
             personName: trimmed,
-            dept,
-            role,
-            bhd,
+            dept: "Demora",
+            role: ROLES[0],
+            bhd: true,
             col: "planned",
             createdBy: loginName || "anonymous",
             createdAt: new Date().toISOString(),
@@ -380,10 +401,14 @@
         }
 
         function removeCard(id) {
+          const target = data.cards.find(c => c.id === id);
+          if (target?.isTemplate) return; // protected
           onChange({ ...data, cards: data.cards.filter(c => c.id !== id) });
         }
 
         function updateCard(id, patch) {
+          const target = data.cards.find(c => c.id === id);
+          // Templates are editable (dept/role/bhd) if you want, but still not deletable:
           onChange({
             ...data,
             cards: data.cards.map(c => (c.id === id ? { ...c, ...patch } : c)),
@@ -395,17 +420,39 @@
           e.dataTransfer.effectAllowed = "move";
         }
 
+        function allowDrop(e) {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "move";
+        }
+
         function onDrop(e, colKey) {
           e.preventDefault();
           const cardId = e.dataTransfer.getData("text/plain");
           if (!cardId) return;
+
+          const card = data.cards.find(c => c.id === cardId);
+          if (!card) return;
+
+          // If dropping a template OUT of the pool: create a copy
+          if (card.isTemplate && card.col === BADGE_POOL_KEY && colKey !== BADGE_POOL_KEY) {
+            const copy = {
+              ...card,
+              id: uid(),
+              isTemplate: false,
+              personName: "(assign name)", // prompt user to edit
+              col: colKey,
+              createdBy: loginName || "anonymous",
+              createdAt: new Date().toISOString(),
+            };
+            onChange({ ...data, cards: [copy, ...data.cards] });
+            setDragOverCol(null);
+            return;
+          }
+
+          // If trying to drop a non-template into pool, allow it but keep it non-template
+          // (If you want to forbid this, I can lock it.)
           updateCard(cardId, { col: colKey });
           setDragOverCol(null);
-        }
-
-        function allowDrop(e) {
-          e.preventDefault();
-          e.dataTransfer.dropEffect = "move";
         }
 
         const cardsByCol = useMemo(() => {
@@ -414,43 +461,30 @@
           for (const c of data.cards) {
             (m[c.col] || (m[c.col] = [])).push(c);
           }
+
+          // Keep templates at the top of the pool
+          if (m[BADGE_POOL_KEY]) {
+            m[BADGE_POOL_KEY].sort((a,b) => (b.isTemplate === a.isTemplate) ? 0 : (b.isTemplate ? 1 : -1));
+          }
           return m;
         }, [data.cards]);
 
         return (
           <>
             <div className="panel">
-              <h3>Add associate</h3>
+              <h3>Add associate (people card)</h3>
               <div className="formRow">
                 <input
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   placeholder="Associate name"
                   style={{ minWidth: 240 }}
-                  disabled={!canUse}
                 />
-
-                <select value={dept} onChange={(e) => setDept(e.target.value)} disabled={!canUse}>
-                  <option value="Demora">Demora</option>
-                  <option value="LaborShare">LaborShare</option>
-                </select>
-
-                <select value={role} onChange={(e) => setRole(e.target.value)} disabled={!canUse} style={{ minWidth: 220 }}>
-                  {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
-                </select>
-
-                <select value={bhd ? "BHD" : "NotBHD"} onChange={(e) => setBhd(e.target.value === "BHD")} disabled={!canUse}>
-                  <option value="BHD">Back Half Days</option>
-                  <option value="NotBHD">Not BHD</option>
-                </select>
-
-                <button className="primary" onClick={addCard} disabled={!canUse}>
-                  Add
-                </button>
+                <button className="primary" onClick={addPersonCard}>Add</button>
               </div>
 
               <div className="mutedLine">
-                Badge shows: <strong>Department</strong> + <strong>Role/Path</strong> + <strong>BHD</strong>.
+                Tip: If you want “badge-first” staffing, drag a template from <strong>Badge Pool</strong> onto the board, then replace “(assign name)”.
               </div>
             </div>
 
@@ -464,12 +498,19 @@
                   onDrop={(e) => onDrop(e, col.key)}
                 >
                   <div className="colHeader">
-                    <h2>{col.title}</h2>
+                    <div style={{display:"flex", gap:8, alignItems:"center"}}>
+                      <h2 style={{margin:0}}>{col.title}</h2>
+                      {col.protected ? <span className="protectedTag">Protected</span> : null}
+                    </div>
                     <span>{(cardsByCol[col.key] || []).length}</span>
                   </div>
 
                   <div className="dropZone">
-                    {(cardsByCol[col.key] || []).length === 0 ? (
+                    {col.key === BADGE_POOL_KEY ? (
+                      <div className="hint">
+                        Drag a badge template from here onto the board to create a copy. Templates cannot be deleted.
+                      </div>
+                    ) : (cardsByCol[col.key] || []).length === 0 ? (
                       <div className="hint">Drag cards here.</div>
                     ) : null}
 
@@ -479,27 +520,45 @@
                         className="card"
                         draggable
                         onDragStart={(e) => onDragStart(e, card.id)}
-                        title="Drag to move"
+                        title={card.isTemplate ? "Template (drag to create a copy)" : "Drag to move"}
                       >
                         <div className="cardTop">
                           <div>
-                            <p className="name">{card.personName}</p>
+                            <p className="name">
+                              {card.personName} {card.isTemplate ? <span className="protectedTag" style={{marginLeft:8}}>Template</span> : null}
+                            </p>
+
                             <div className="row" style={{ marginTop: 8 }}>
                               <span className="pill">{card.dept}</span>
                               <span className={"badge " + (card.bhd ? "bhd" : "notbhd")}>
                                 {card.bhd ? "BHD" : "—"} • {card.role}
                               </span>
                             </div>
+
                             <div className="small" style={{ marginTop: 8 }}>
-                              Added by <strong>{card.createdBy}</strong>
+                              {card.isTemplate ? "System template" : <>Added by <strong>{card.createdBy}</strong></>}
                             </div>
                           </div>
+
                           <div className="actions">
-                            <button className="iconBtn" onClick={() => removeCard(card.id)}>Delete</button>
+                            {!card.isTemplate ? (
+                              <button className="iconBtn" onClick={() => removeCard(card.id)}>Delete</button>
+                            ) : (
+                              <button className="iconBtn" disabled title="Templates cannot be deleted">Locked</button>
+                            )}
                           </div>
                         </div>
 
+                        {/* Editable fields */}
                         <div className="formRow" style={{ marginTop: 10 }}>
+                          {!card.isTemplate ? (
+                            <input
+                              value={card.personName}
+                              onChange={(e) => updateCard(card.id, { personName: e.target.value })}
+                              style={{ minWidth: 200 }}
+                            />
+                          ) : null}
+
                           <select value={card.dept} onChange={(e) => updateCard(card.id, { dept: e.target.value })}>
                             <option value="Demora">Demora</option>
                             <option value="LaborShare">LaborShare</option>
@@ -524,7 +583,7 @@
         );
       }
 
-      function UniversityBoard({ data, onChange, canUse, loginName }) {
+      function UniversityBoard({ data, onChange, loginName }) {
         const [course, setCourse] = useState("");
         const [assignment, setAssignment] = useState("");
         const [due, setDue] = useState("");
@@ -599,19 +658,16 @@
             <div className="panel">
               <h3>Add assignment</h3>
               <div className="grid2">
-                <input value={course} onChange={(e) => setCourse(e.target.value)} placeholder="Class (e.g., BUS 240)" disabled={!canUse}/>
-                <input value={assignment} onChange={(e) => setAssignment(e.target.value)} placeholder="Assignment (e.g., Week 3 Discussion)" disabled={!canUse}/>
+                <input value={course} onChange={(e) => setCourse(e.target.value)} placeholder="Class (e.g., BUS 240)"/>
+                <input value={assignment} onChange={(e) => setAssignment(e.target.value)} placeholder="Assignment (e.g., Week 3 Discussion)"/>
               </div>
               <div className="formRow">
-                <input type="date" value={due} onChange={(e) => setDue(e.target.value)} disabled={!canUse}/>
-                <button className="primary" onClick={addAssignment} disabled={!canUse}>Add</button>
-              </div>
-              <div className="mutedLine">
-                Tip: drag assignments across columns as you work. Edit class/title/due date directly on each card.
+                <input type="date" value={due} onChange={(e) => setDue(e.target.value)} />
+                <button className="primary" onClick={addAssignment}>Add</button>
               </div>
             </div>
 
-            <div className="board">
+            <div className="board" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
               {UNI_COLS.map(col => (
                 <div
                   key={col.key}
