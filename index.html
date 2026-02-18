@@ -16,7 +16,6 @@
         --text: rgba(255, 255, 255, 0.92);
         --border: rgba(255, 255, 255, 0.12);
         --shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
-        --pill: rgba(255, 255, 255, 0.12);
       }
       * { box-sizing: border-box; }
       body {
@@ -47,10 +46,6 @@
         outline: none;
       }
       button { cursor: pointer; }
-      button.primary {
-        background: rgba(29,185,84,.15);
-        border-color: rgba(29,185,84,.35);
-      }
       button.danger {
         background: rgba(255,77,77,.12);
         border-color: rgba(255,77,77,.35);
@@ -123,18 +118,10 @@
       }
       .cardTop { display:flex; align-items:flex-start; justify-content: space-between; gap: 10px; }
       .name { font-weight: 700; font-size: 14px; margin: 0; }
-      .small { font-size: 12px; color: var(--muted); }
-      .row { display:flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+      .subline { font-size: 13px; color: rgba(255,255,255,.82); margin-top: 6px; }
+      .small { font-size: 12px; color: var(--muted); margin-top: 8px; }
 
-      .pill {
-        display:inline-flex; align-items:center; gap: 6px;
-        padding: 6px 10px;
-        border-radius: 999px;
-        background: var(--pill);
-        border: 1px solid rgba(255,255,255,.14);
-        font-size: 12px;
-        white-space: nowrap;
-      }
+      .row { display:flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
       .badge {
         display:inline-flex;
         align-items:center;
@@ -143,8 +130,6 @@
         border-radius: 999px;
         border: 1px solid rgba(255,255,255,.18);
         font-size: 12px;
-      }
-      .badge.bhd {
         background: rgba(29,185,84,.15);
         border-color: rgba(29,185,84,.35);
       }
@@ -167,7 +152,6 @@
         max-width: 92vw;
       }
 
-      /* Simple modal */
       .modalBack {
         position: fixed; inset: 0;
         background: rgba(0,0,0,.55);
@@ -236,7 +220,6 @@
       }
 
       function App() {
-        // Kept (no placeholder). You can leave it as-is; it only impacts storage key for your browser.
         const [loginName, setLoginName] = useState(() => localStorage.getItem("swb_login") || "migudavc");
         const [activeTab, setActiveTab] = useState("staffing");
         const [lastUpdated, setLastUpdated] = useState(() => localStorage.getItem("swb_lastUpdated") || nowStamp());
@@ -264,11 +247,11 @@
           showToast._t = window.setTimeout(() => setToast(""), 1800);
         }
 
-        // ✅ Not permanent anymore — just a normal editable/movable card, seeded if missing
+        // Normal (movable/editable) seeded card
         function miguelCard() {
           return {
             id: "miguel-" + uid(),
-            personName: "Miguel Davalos",
+            personName: "Miguel A Davalos",
             login: "migudavc",
             shiftCoHost: "DB3T0700",
             shiftPattern: "Back Half Days",
@@ -286,7 +269,7 @@
           };
         }
 
-        // Load state + if Miguel card missing, add it (but DO NOT overwrite col/role => fixes drag issue)
+        // Load state + ensure Miguel exists; keep current col/role so dragging works
         useEffect(() => {
           const raw = localStorage.getItem(storageKey);
           const parsed = raw ? safeParse(raw, defaultState()) : defaultState();
@@ -295,18 +278,18 @@
           parsed.staffing.cards = Array.isArray(parsed.staffing.cards) ? parsed.staffing.cards : [];
 
           const hasMiguel = parsed.staffing.cards.some(
-            (c) => c && c.login === "migudavc" && c.personName === "Miguel Davalos"
+            (c) => c && c.login === "migudavc" && (c.personName || "").toLowerCase().includes("miguel")
           );
 
           if (!hasMiguel) {
             parsed.staffing.cards = [miguelCard(), ...parsed.staffing.cards];
           } else {
-            // Ensure the info is correct (edit fields) but keep current col/role
+            // Update displayed info only (no "pill/circle" UI), but keep col/role untouched
             parsed.staffing.cards = parsed.staffing.cards.map((c) => {
-              if (!(c && c.login === "migudavc" && c.personName === "Miguel Davalos")) return c;
+              if (!(c && c.login === "migudavc" && (c.personName || "").toLowerCase().includes("miguel"))) return c;
               return {
                 ...c,
-                personName: "Miguel Davalos",
+                personName: "Miguel A Davalos",
                 login: "migudavc",
                 shiftCoHost: "DB3T0700",
                 shiftPattern: "Back Half Days",
@@ -602,18 +585,12 @@
                     >
                       <div className="cardTop">
                         <div>
-                          <p className="name">{card.personName}</p>
+                          {/* No circles/pills — plain text lines */}
+                          <p className="name">{card.personName} ({card.login})</p>
+                          <div className="subline">{card.shiftCoHost} - {card.shiftPattern}</div>
 
                           <div className="row">
-                            <span className="pill">Login: {card.login}</span>
-                            <span className="pill">Shift Co-Host: {card.shiftCoHost}</span>
-                            <span className="pill">Shift Pattern: {card.shiftPattern}</span>
-                          </div>
-
-                          <div className="row">
-                            <span className="badge bhd">Back Half Days</span>
-
-                            <span className="badge bhd" title="Select role">
+                            <span className="badge">
                               Role:&nbsp;
                               <select
                                 value={card.role}
@@ -634,9 +611,7 @@
                             </span>
                           </div>
 
-                          <div className="small" style={{ marginTop: 8 }}>
-                            Drag between columns when unlocked.
-                          </div>
+                          <div className="small">Drag between columns when unlocked.</div>
                         </div>
 
                         <div className="actions">
@@ -733,7 +708,7 @@
 
         return (
           <>
-            <div className="panel" style={{ marginTop: 14 }}>
+            <div className="modal" style={{ marginTop: 14, maxWidth: "none" }}>
               <h3>Add assignment</h3>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 <input value={course} onChange={(e) => setCourse(e.target.value)} placeholder="Class (e.g., BUS 240)" disabled={isLocked}/>
@@ -773,11 +748,8 @@
                         <div className="cardTop">
                           <div>
                             <p className="name">{card.title}</p>
-                            <div className="row">
-                              <span className="pill">{card.course}</span>
-                              <span className="pill">Due: {fmtDue(card.dueDate)}</span>
-                              <span className="pill">Login: {card.createdBy}</span>
-                            </div>
+                            <div className="subline">{card.course} • Due: {fmtDue(card.dueDate)}</div>
+                            <div className="small">Login: {card.createdBy}</div>
                           </div>
                           <div className="actions">
                             <button className="iconBtn" onClick={() => removeCard(card.id)} disabled={isLocked}>
