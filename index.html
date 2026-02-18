@@ -12,7 +12,6 @@
     <style>
       :root {
         --bg: #0b1020;
-        --card: #121a33;
         --muted: rgba(255,255,255,.65);
         --text: rgba(255,255,255,.92);
         --border: rgba(255,255,255,.12);
@@ -56,6 +55,15 @@
         background: rgba(255,77,77,.12);
         border-color: rgba(255,77,77,.35);
       }
+      button.lock {
+        background: rgba(255,176,32,.14);
+        border-color: rgba(255,176,32,.35);
+      }
+      button.lock.active {
+        background: rgba(255,77,77,.14);
+        border-color: rgba(255,77,77,.35);
+      }
+
       .tabs { margin-top: 14px; display: flex; gap: 10px; flex-wrap: wrap; }
       .tab {
         padding: 10px 12px;
@@ -174,6 +182,42 @@
         background: rgba(255,255,255,.08);
         color: rgba(255,255,255,.8);
       }
+      .toast {
+        position: fixed;
+        left: 50%;
+        bottom: 18px;
+        transform: translateX(-50%);
+        padding: 10px 12px;
+        border-radius: 14px;
+        border: 1px solid rgba(255,255,255,.18);
+        background: rgba(18,26,51,.9);
+        box-shadow: 0 14px 30px rgba(0,0,0,.4);
+        font-size: 13px;
+        color: rgba(255,255,255,.9);
+        max-width: 92vw;
+      }
+
+      /* Simple modal */
+      .modalBack {
+        position: fixed; inset: 0;
+        background: rgba(0,0,0,.55);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 18px;
+      }
+      .modal {
+        width: 100%;
+        max-width: 420px;
+        border: 1px solid rgba(255,255,255,.18);
+        border-radius: 18px;
+        background: rgba(18,26,51,.95);
+        box-shadow: 0 18px 40px rgba(0,0,0,.55);
+        padding: 14px;
+      }
+      .modal h3 { margin: 0 0 10px 0; font-size: 15px; }
+      .modalActions { display:flex; gap: 10px; justify-content: flex-end; margin-top: 12px; }
+      .modalNote { font-size: 12px; color: rgba(255,255,255,.65); margin-top: 8px; line-height: 1.35; }
     </style>
   </head>
   <body>
@@ -195,7 +239,6 @@
         "ICQA",
       ];
 
-      // Special protected badge pool column key:
       const BADGE_POOL_KEY = "badgePool";
 
       const STAFFING_COLS = [
@@ -217,7 +260,6 @@
         const d = new Date();
         return d.toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" });
       };
-
       const nowStamp = () => new Date().toLocaleString();
       const uid = () => Math.random().toString(16).slice(2) + "-" + Math.random().toString(16).slice(2);
 
@@ -229,23 +271,38 @@
         const [loginName, setLoginName] = useState(() => localStorage.getItem("swb_login") || "");
         const [activeTab, setActiveTab] = useState("staffing");
         const [lastUpdated, setLastUpdated] = useState(() => localStorage.getItem("swb_lastUpdated") || nowStamp());
+        const [toast, setToast] = useState("");
 
-        const storageKey = React.useMemo(() => `swb_state_${loginName || "anonymous"}`, [loginName]);
+        // PIN + lock (saved per login)
+        const lockKey = useMemo(() => `swb_locked_${loginName || "anonymous"}`, [loginName]);
+        const pinKey  = useMemo(() => `swb_pin_${loginName || "anonymous"}`, [loginName]);
+        const [isLocked, setIsLocked] = useState(() => localStorage.getItem(lockKey) === "1");
+        const [pinSet, setPinSet] = useState(() => !!localStorage.getItem(pinKey));
+
+        // modal controls
+        const [pinModal, setPinModal] = useState({ open: false, mode: "unlock" }); // unlock | setpin
+        const [pinInput, setPinInput] = useState("");
+        const [pinInput2, setPinInput2] = useState("");
+
+        const storageKey = useMemo(() => `swb_state_${loginName || "anonymous"}`, [loginName]);
         const [state, setState] = useState(() => {
           const raw = localStorage.getItem(storageKey);
           return raw ? safeParse(raw, null) : null;
         });
 
+        function showToast(msg) {
+          setToast(msg);
+          window.clearTimeout(showToast._t);
+          showToast._t = window.setTimeout(() => setToast(""), 1800);
+        }
+
         function defaultState() {
           return {
-            staffing: {
-              cards: seedBadgePool([]), // ensure pool exists
-            },
+            staffing: { cards: seedBadgePool([]) },
             university: { cards: [] },
           };
         }
 
-        // Seed the protected pool with one badge per role (both depts x BHD options)
         function seedBadgePool(existingCards) {
           const hasPool = existingCards.some(c => c.col === BADGE_POOL_KEY && c.isTemplate);
           if (hasPool) return existingCards;
@@ -271,7 +328,6 @@
               }
             }
           }
-
           return [...templates, ...existingCards];
         }
 
@@ -279,7 +335,6 @@
           const raw = localStorage.getItem(storageKey);
           if (raw) {
             const parsed = safeParse(raw, defaultState());
-            // make sure the pool templates exist even if user had older state
             parsed.staffing.cards = seedBadgePool(parsed.staffing.cards || []);
             setState(parsed);
           } else {
@@ -289,7 +344,6 @@
         }, [storageKey]);
 
         function touchUpdate(nextState) {
-          // Always keep badge pool templates present
           nextState = {
             ...nextState,
             staffing: {
@@ -307,10 +361,76 @@
 
         useEffect(() => {
           localStorage.setItem("swb_login", loginName);
+
+          // refresh lock/pin per login when name changes
+          const lk = localStorage.getItem(`swb_locked_${loginName || "anonymous"}`) === "1";
+          const ps = !!localStorage.getItem(`swb_pin_${loginName || "anonymous"}`);
+          setIsLocked(lk);
+          setPinSet(ps);
         }, [loginName]);
 
+        useEffect(() => {
+          localStorage.setItem(lockKey, isLocked ? "1" : "0");
+        }, [isLocked, lockKey]);
+
         function resetBoard() {
+          if (isLocked) { showToast("Board is locked (view-only). Unlock with PIN to clear."); return; }
           touchUpdate(defaultState());
+        }
+
+        function openUnlock() {
+          // If no pin set yet, direct to set pin
+          if (!pinSet) {
+            setPinInput("");
+            setPinInput2("");
+            setPinModal({ open: true, mode: "setpin" });
+            return;
+          }
+          setPinInput("");
+          setPinInput2("");
+          setPinModal({ open: true, mode: "unlock" });
+        }
+
+        function openSetPin() {
+          if (isLocked) { showToast("Unlock with PIN before changing the PIN."); return; }
+          setPinInput("");
+          setPinInput2("");
+          setPinModal({ open: true, mode: "setpin" });
+        }
+
+        function lockNow() {
+          setIsLocked(true);
+          showToast("Board locked (view-only).");
+        }
+
+        function tryUnlock() {
+          const stored = localStorage.getItem(pinKey) || "";
+          if (!stored) {
+            showToast("No PIN set. Set a PIN first.");
+            setPinModal({ open: true, mode: "setpin" });
+            return;
+          }
+          if (pinInput.trim() === stored) {
+            setIsLocked(false);
+            setPinModal({ open: false, mode: "unlock" });
+            setPinInput("");
+            showToast("Board unlocked (editing enabled).");
+          } else {
+            showToast("Incorrect PIN.");
+          }
+        }
+
+        function setNewPin() {
+          const p1 = (pinInput || "").trim();
+          const p2 = (pinInput2 || "").trim();
+          if (p1.length < 4) { showToast("PIN must be at least 4 digits/characters."); return; }
+          if (p1 !== p2) { showToast("PINs do not match."); return; }
+
+          localStorage.setItem(pinKey, p1);
+          setPinSet(true);
+          setPinModal({ open: false, mode: "setpin" });
+          setPinInput(""); setPinInput2("");
+          showToast("PIN set.");
         }
 
         if (!state) return null;
@@ -324,6 +444,7 @@
                   <span><strong>Today:</strong> {todayStr()}</span>
                   <span><strong>Last Updated:</strong> {lastUpdated}</span>
                   <span><strong>Login Name:</strong> {loginName ? loginName : "Not set"}</span>
+                  <span><strong>Status:</strong> {isLocked ? "Locked (view-only)" : "Unlocked"}</span>
                 </div>
               </div>
 
@@ -334,6 +455,21 @@
                   placeholder="Enter login name (e.g., migueld)"
                   style={{ minWidth: 240 }}
                 />
+
+                {isLocked ? (
+                  <button className="lock active" onClick={openUnlock} title="Unlock requires PIN">
+                    Unlock (PIN)
+                  </button>
+                ) : (
+                  <button className="lock" onClick={lockNow} title="Lock makes the board view-only">
+                    Lock Board
+                  </button>
+                )}
+
+                <button onClick={openSetPin} title="Set or change leadership PIN">
+                  {pinSet ? "Change PIN" : "Set PIN"}
+                </button>
+
                 <button className="danger" onClick={resetBoard} title="Clears both boards for this login (pool remains)">
                   Clear Boards
                 </button>
@@ -352,39 +488,110 @@
             {activeTab === "staffing" ? (
               <StaffingBoard
                 data={state.staffing}
-                onChange={(nextStaffing) => touchUpdate({ ...state, staffing: nextStaffing })}
+                onChange={(nextStaffing) => {
+                  if (isLocked) { showToast("Locked (view-only). Unlock with PIN to edit."); return; }
+                  touchUpdate({ ...state, staffing: nextStaffing });
+                }}
                 loginName={loginName}
+                showToast={showToast}
+                isLocked={isLocked}
               />
             ) : (
               <UniversityBoard
                 data={state.university}
-                onChange={(nextUni) => touchUpdate({ ...state, university: nextUni })}
+                onChange={(nextUni) => {
+                  if (isLocked) { showToast("Locked (view-only). Unlock with PIN to edit."); return; }
+                  touchUpdate({ ...state, university: nextUni });
+                }}
                 loginName={loginName}
+                isLocked={isLocked}
+                showToast={showToast}
               />
             )}
 
             <div className="panel">
-              <h3>How the protected Badge Pool works</h3>
+              <h3>Security note</h3>
               <div className="mutedLine">
-                • Anything in <strong>Badge Pool</strong> is a <strong>template</strong> and cannot be deleted.<br/>
-                • Drag a template from the pool into any other column to <strong>create a copy</strong> (the pool stays intact).<br/>
-                • This lets you keep “badge types” always available while staffing cards on the board can be removed.
+                This PIN is stored in the browser (localStorage) per login name. It’s a lightweight control to prevent accidental edits during stand-up,
+                not a secure authentication system.
               </div>
             </div>
+
+            {toast ? <div className="toast">{toast}</div> : null}
+
+            {pinModal.open ? (
+              <div className="modalBack" onClick={() => setPinModal({ ...pinModal, open: false })}>
+                <div className="modal" onClick={(e) => e.stopPropagation()}>
+                  {pinModal.mode === "unlock" ? (
+                    <>
+                      <h3>Unlock board (PIN required)</h3>
+                      <input
+                        type="password"
+                        placeholder="Enter PIN"
+                        value={pinInput}
+                        onChange={(e) => setPinInput(e.target.value)}
+                        style={{ width: "100%" }}
+                      />
+                      <div className="modalActions">
+                        <button onClick={() => setPinModal({ ...pinModal, open: false })}>Cancel</button>
+                        <button className="primary" onClick={tryUnlock}>Unlock</button>
+                      </div>
+                      <div className="modalNote">
+                        If you don’t know the PIN, the board stays view-only.
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <h3>{pinSet ? "Change PIN" : "Set leadership PIN"}</h3>
+                      <input
+                        type="password"
+                        placeholder="New PIN (min 4 chars)"
+                        value={pinInput}
+                        onChange={(e) => setPinInput(e.target.value)}
+                        style={{ width: "100%" }}
+                      />
+                      <div style={{ height: 10 }} />
+                      <input
+                        type="password"
+                        placeholder="Confirm new PIN"
+                        value={pinInput2}
+                        onChange={(e) => setPinInput2(e.target.value)}
+                        style={{ width: "100%" }}
+                      />
+                      <div className="modalActions">
+                        <button onClick={() => setPinModal({ ...pinModal, open: false })}>Cancel</button>
+                        <button className="primary" onClick={setNewPin}>Save PIN</button>
+                      </div>
+                      <div className="modalNote">
+                        Remember: this is stored locally in this browser profile.
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            ) : null}
           </div>
         );
       }
 
-      function StaffingBoard({ data, onChange, loginName }) {
+      function StaffingBoard({ data, onChange, loginName, showToast, isLocked }) {
         const [newName, setNewName] = useState("");
+
+        // Create-template form
+        const [tplDept, setTplDept] = useState("Demora");
+        const [tplRole, setTplRole] = useState(ROLES[0]);
+        const [tplBhd, setTplBhd] = useState(true);
+        const [tplLabel, setTplLabel] = useState("Badge");
 
         const [dragOverCol, setDragOverCol] = useState(null);
 
+        function blocked() { showToast("Locked (view-only). Unlock with PIN to edit."); }
+
         function addPersonCard() {
+          if (isLocked) return blocked();
           const trimmed = newName.trim();
           if (!trimmed) return;
 
-          // Default new card settings (you can edit after)
           const card = {
             id: uid(),
             isTemplate: false,
@@ -400,15 +607,33 @@
           setNewName("");
         }
 
+        function createTemplate() {
+          if (isLocked) return blocked();
+          const label = (tplLabel || "").trim() || "Badge";
+          const template = {
+            id: "tpl-" + uid(),
+            isTemplate: true,
+            personName: label,
+            dept: tplDept,
+            role: tplRole,
+            bhd: tplBhd,
+            col: BADGE_POOL_KEY,
+            createdBy: "system",
+            createdAt: new Date().toISOString(),
+          };
+          onChange({ ...data, cards: [template, ...data.cards] });
+          showToast("Template created in Badge Pool.");
+        }
+
         function removeCard(id) {
+          if (isLocked) return blocked();
           const target = data.cards.find(c => c.id === id);
-          if (target?.isTemplate) return; // protected
+          if (target?.isTemplate) return;
           onChange({ ...data, cards: data.cards.filter(c => c.id !== id) });
         }
 
         function updateCard(id, patch) {
-          const target = data.cards.find(c => c.id === id);
-          // Templates are editable (dept/role/bhd) if you want, but still not deletable:
+          if (isLocked) return blocked();
           onChange({
             ...data,
             cards: data.cards.map(c => (c.id === id ? { ...c, ...patch } : c)),
@@ -416,16 +641,19 @@
         }
 
         function onDragStart(e, cardId) {
+          if (isLocked) { e.preventDefault(); blocked(); return; }
           e.dataTransfer.setData("text/plain", cardId);
           e.dataTransfer.effectAllowed = "move";
         }
 
         function allowDrop(e) {
+          if (isLocked) return;
           e.preventDefault();
           e.dataTransfer.dropEffect = "move";
         }
 
         function onDrop(e, colKey) {
+          if (isLocked) return blocked();
           e.preventDefault();
           const cardId = e.dataTransfer.getData("text/plain");
           if (!cardId) return;
@@ -433,13 +661,20 @@
           const card = data.cards.find(c => c.id === cardId);
           if (!card) return;
 
-          // If dropping a template OUT of the pool: create a copy
+          // HARD-LOCK: no non-template cards into Badge Pool
+          if (colKey === BADGE_POOL_KEY && !card.isTemplate) {
+            showToast("Badge Pool is templates-only. Drop into another column.");
+            setDragOverCol(null);
+            return;
+          }
+
+          // Template from pool -> other column creates a copy
           if (card.isTemplate && card.col === BADGE_POOL_KEY && colKey !== BADGE_POOL_KEY) {
             const copy = {
               ...card,
               id: uid(),
               isTemplate: false,
-              personName: "(assign name)", // prompt user to edit
+              personName: "(assign name)",
               col: colKey,
               createdBy: loginName || "anonymous",
               createdAt: new Date().toISOString(),
@@ -449,8 +684,12 @@
             return;
           }
 
-          // If trying to drop a non-template into pool, allow it but keep it non-template
-          // (If you want to forbid this, I can lock it.)
+          // Keep templates in the pool (no-op if dropped back into pool)
+          if (card.isTemplate && card.col === BADGE_POOL_KEY && colKey === BADGE_POOL_KEY) {
+            setDragOverCol(null);
+            return;
+          }
+
           updateCard(cardId, { col: colKey });
           setDragOverCol(null);
         }
@@ -461,8 +700,6 @@
           for (const c of data.cards) {
             (m[c.col] || (m[c.col] = [])).push(c);
           }
-
-          // Keep templates at the top of the pool
           if (m[BADGE_POOL_KEY]) {
             m[BADGE_POOL_KEY].sort((a,b) => (b.isTemplate === a.isTemplate) ? 0 : (b.isTemplate ? 1 : -1));
           }
@@ -474,17 +711,27 @@
             <div className="panel">
               <h3>Add associate (people card)</h3>
               <div className="formRow">
-                <input
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  placeholder="Associate name"
-                  style={{ minWidth: 240 }}
-                />
-                <button className="primary" onClick={addPersonCard}>Add</button>
+                <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Associate name" style={{ minWidth: 240 }} disabled={isLocked}/>
+                <button className="primary" onClick={addPersonCard} disabled={isLocked}>Add</button>
               </div>
+            </div>
 
-              <div className="mutedLine">
-                Tip: If you want “badge-first” staffing, drag a template from <strong>Badge Pool</strong> onto the board, then replace “(assign name)”.
+            <div className="panel">
+              <h3>Create badge template</h3>
+              <div className="formRow">
+                <input value={tplLabel} onChange={(e) => setTplLabel(e.target.value)} placeholder="Template label (e.g., BHD PS)" style={{ minWidth: 220 }} disabled={isLocked}/>
+                <select value={tplDept} onChange={(e) => setTplDept(e.target.value)} disabled={isLocked}>
+                  <option value="Demora">Demora</option>
+                  <option value="LaborShare">LaborShare</option>
+                </select>
+                <select value={tplRole} onChange={(e) => setTplRole(e.target.value)} style={{ minWidth: 220 }} disabled={isLocked}>
+                  {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
+                <select value={tplBhd ? "BHD" : "NotBHD"} onChange={(e) => setTplBhd(e.target.value === "BHD")} disabled={isLocked}>
+                  <option value="BHD">Back Half Days</option>
+                  <option value="NotBHD">Not BHD</option>
+                </select>
+                <button className="primary" onClick={createTemplate} disabled={isLocked}>Create template</button>
               </div>
             </div>
 
@@ -492,15 +739,15 @@
               {STAFFING_COLS.map(col => (
                 <div
                   key={col.key}
-                  className={"col " + (dragOverCol === col.key ? "dragOver" : "")}
-                  onDragOver={(e) => { allowDrop(e); setDragOverCol(col.key); }}
+                  className={"col " + (!isLocked && dragOverCol === col.key ? "dragOver" : "")}
+                  onDragOver={(e) => { allowDrop(e); if (!isLocked) setDragOverCol(col.key); }}
                   onDragLeave={() => setDragOverCol(null)}
                   onDrop={(e) => onDrop(e, col.key)}
                 >
                   <div className="colHeader">
                     <div style={{display:"flex", gap:8, alignItems:"center"}}>
                       <h2 style={{margin:0}}>{col.title}</h2>
-                      {col.protected ? <span className="protectedTag">Protected</span> : null}
+                      {col.protected ? <span className="protectedTag">Templates only</span> : null}
                     </div>
                     <span>{(cardsByCol[col.key] || []).length}</span>
                   </div>
@@ -508,7 +755,7 @@
                   <div className="dropZone">
                     {col.key === BADGE_POOL_KEY ? (
                       <div className="hint">
-                        Drag a badge template from here onto the board to create a copy. Templates cannot be deleted.
+                        Drag templates from here onto the board to create copies. Normal cards cannot be dropped here.
                       </div>
                     ) : (cardsByCol[col.key] || []).length === 0 ? (
                       <div className="hint">Drag cards here.</div>
@@ -518,9 +765,9 @@
                       <div
                         key={card.id}
                         className="card"
-                        draggable
+                        draggable={!isLocked}
                         onDragStart={(e) => onDragStart(e, card.id)}
-                        title={card.isTemplate ? "Template (drag to create a copy)" : "Drag to move"}
+                        title={isLocked ? "Locked (view-only)" : (card.isTemplate ? "Template (drag to create a copy)" : "Drag to move")}
                       >
                         <div className="cardTop">
                           <div>
@@ -542,33 +789,28 @@
 
                           <div className="actions">
                             {!card.isTemplate ? (
-                              <button className="iconBtn" onClick={() => removeCard(card.id)}>Delete</button>
+                              <button className="iconBtn" onClick={() => removeCard(card.id)} disabled={isLocked}>Delete</button>
                             ) : (
                               <button className="iconBtn" disabled title="Templates cannot be deleted">Locked</button>
                             )}
                           </div>
                         </div>
 
-                        {/* Editable fields */}
                         <div className="formRow" style={{ marginTop: 10 }}>
                           {!card.isTemplate ? (
-                            <input
-                              value={card.personName}
-                              onChange={(e) => updateCard(card.id, { personName: e.target.value })}
-                              style={{ minWidth: 200 }}
-                            />
+                            <input value={card.personName} onChange={(e) => updateCard(card.id, { personName: e.target.value })} style={{ minWidth: 200 }} disabled={isLocked}/>
                           ) : null}
 
-                          <select value={card.dept} onChange={(e) => updateCard(card.id, { dept: e.target.value })}>
+                          <select value={card.dept} onChange={(e) => updateCard(card.id, { dept: e.target.value })} disabled={isLocked}>
                             <option value="Demora">Demora</option>
                             <option value="LaborShare">LaborShare</option>
                           </select>
 
-                          <select value={card.role} onChange={(e) => updateCard(card.id, { role: e.target.value })} style={{ minWidth: 220 }}>
+                          <select value={card.role} onChange={(e) => updateCard(card.id, { role: e.target.value })} style={{ minWidth: 220 }} disabled={isLocked}>
                             {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
                           </select>
 
-                          <select value={card.bhd ? "BHD" : "NotBHD"} onChange={(e) => updateCard(card.id, { bhd: e.target.value === "BHD" })}>
+                          <select value={card.bhd ? "BHD" : "NotBHD"} onChange={(e) => updateCard(card.id, { bhd: e.target.value === "BHD" })} disabled={isLocked}>
                             <option value="BHD">Back Half Days</option>
                             <option value="NotBHD">Not BHD</option>
                           </select>
@@ -583,14 +825,16 @@
         );
       }
 
-      function UniversityBoard({ data, onChange, loginName }) {
+      function UniversityBoard({ data, onChange, loginName, isLocked, showToast }) {
         const [course, setCourse] = useState("");
         const [assignment, setAssignment] = useState("");
         const [due, setDue] = useState("");
-
         const [dragOverCol, setDragOverCol] = useState(null);
 
+        function blocked() { showToast("Locked (view-only). Unlock with PIN to edit."); }
+
         function addAssignment() {
+          if (isLocked) return blocked();
           const c = course.trim();
           const a = assignment.trim();
           if (!c || !a) return;
@@ -610,10 +854,12 @@
         }
 
         function removeCard(id) {
+          if (isLocked) return blocked();
           onChange({ ...data, cards: data.cards.filter(c => c.id !== id) });
         }
 
         function updateCard(id, patch) {
+          if (isLocked) return blocked();
           onChange({
             ...data,
             cards: data.cards.map(c => (c.id === id ? { ...c, ...patch } : c)),
@@ -621,21 +867,24 @@
         }
 
         function onDragStart(e, cardId) {
+          if (isLocked) { e.preventDefault(); blocked(); return; }
           e.dataTransfer.setData("text/plain", cardId);
           e.dataTransfer.effectAllowed = "move";
         }
 
+        function allowDrop(e) {
+          if (isLocked) return;
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "move";
+        }
+
         function onDrop(e, colKey) {
+          if (isLocked) return blocked();
           e.preventDefault();
           const cardId = e.dataTransfer.getData("text/plain");
           if (!cardId) return;
           updateCard(cardId, { col: colKey });
           setDragOverCol(null);
-        }
-
-        function allowDrop(e) {
-          e.preventDefault();
-          e.dataTransfer.dropEffect = "move";
         }
 
         const cardsByCol = useMemo(() => {
@@ -658,12 +907,12 @@
             <div className="panel">
               <h3>Add assignment</h3>
               <div className="grid2">
-                <input value={course} onChange={(e) => setCourse(e.target.value)} placeholder="Class (e.g., BUS 240)"/>
-                <input value={assignment} onChange={(e) => setAssignment(e.target.value)} placeholder="Assignment (e.g., Week 3 Discussion)"/>
+                <input value={course} onChange={(e) => setCourse(e.target.value)} placeholder="Class (e.g., BUS 240)" disabled={isLocked}/>
+                <input value={assignment} onChange={(e) => setAssignment(e.target.value)} placeholder="Assignment (e.g., Week 3 Discussion)" disabled={isLocked}/>
               </div>
               <div className="formRow">
-                <input type="date" value={due} onChange={(e) => setDue(e.target.value)} />
-                <button className="primary" onClick={addAssignment}>Add</button>
+                <input type="date" value={due} onChange={(e) => setDue(e.target.value)} disabled={isLocked}/>
+                <button className="primary" onClick={addAssignment} disabled={isLocked}>Add</button>
               </div>
             </div>
 
@@ -671,8 +920,8 @@
               {UNI_COLS.map(col => (
                 <div
                   key={col.key}
-                  className={"col " + (dragOverCol === col.key ? "dragOver" : "")}
-                  onDragOver={(e) => { allowDrop(e); setDragOverCol(col.key); }}
+                  className={"col " + (!isLocked && dragOverCol === col.key ? "dragOver" : "")}
+                  onDragOver={(e) => { allowDrop(e); if (!isLocked) setDragOverCol(col.key); }}
                   onDragLeave={() => setDragOverCol(null)}
                   onDrop={(e) => onDrop(e, col.key)}
                 >
@@ -690,9 +939,9 @@
                       <div
                         key={card.id}
                         className="card"
-                        draggable
+                        draggable={!isLocked}
                         onDragStart={(e) => onDragStart(e, card.id)}
-                        title="Drag to move"
+                        title={isLocked ? "Locked (view-only)" : "Drag to move"}
                       >
                         <div className="cardTop">
                           <div>
@@ -706,25 +955,18 @@
                             </div>
                           </div>
                           <div className="actions">
-                            <button className="iconBtn" onClick={() => removeCard(card.id)}>Delete</button>
+                            <button className="iconBtn" onClick={() => removeCard(card.id)} disabled={isLocked}>Delete</button>
                           </div>
                         </div>
 
                         <div className="formRow" style={{ marginTop: 10 }}>
-                          <input
-                            value={card.course}
-                            onChange={(e) => updateCard(card.id, { course: e.target.value })}
-                            style={{ minWidth: 180 }}
-                          />
-                          <input
-                            value={card.title}
-                            onChange={(e) => updateCard(card.id, { title: e.target.value })}
-                            style={{ minWidth: 220 }}
-                          />
+                          <input value={card.course} onChange={(e) => updateCard(card.id, { course: e.target.value })} style={{ minWidth: 180 }} disabled={isLocked}/>
+                          <input value={card.title} onChange={(e) => updateCard(card.id, { title: e.target.value })} style={{ minWidth: 220 }} disabled={isLocked}/>
                           <input
                             type="date"
                             value={card.dueDate ? new Date(card.dueDate).toISOString().slice(0,10) : ""}
                             onChange={(e) => updateCard(card.id, { dueDate: e.target.value ? new Date(e.target.value).toISOString() : null })}
+                            disabled={isLocked}
                           />
                         </div>
                       </div>
