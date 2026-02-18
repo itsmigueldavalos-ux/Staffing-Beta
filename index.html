@@ -1,1093 +1,687 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Staffing Digital Whiteboard</title>
-  <style>
-    :root{
-      --bg:#0b1220;
-      --text:#e8eefc;
-      --muted:#a8b3cf;
-      --border:rgba(255,255,255,.10);
-      --shadow: 0 10px 25px rgba(0,0,0,.35);
-      --danger:#ff5c5c;
-      --ok:#2ecc71;
-      --chip:#1a2440;
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Staffing Whiteboard</title>
 
-      --badgeBlue:#1f6feb;   /* Back Half Days */
-      --badgeTeal:#0ea5a5;   /* Shift Pattern Co-Host */
-      --rolePurple:#7c3aed;  /* Role badge */
-    }
-    *{box-sizing:border-box}
-    body{
-      margin:0;
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
-      background: radial-gradient(1200px 800px at 20% 10%, #16264b 0%, var(--bg) 55%);
-      color:var(--text);
-    }
-    header{
-      position:sticky; top:0; z-index:10;
-      background: linear-gradient(180deg, rgba(11,18,32,.98), rgba(11,18,32,.85));
-      backdrop-filter: blur(10px);
-      border-bottom:1px solid var(--border);
-    }
-    .wrap{max-width:1200px; margin:0 auto; padding:14px 16px;}
-    .topbar{display:flex; gap:12px; flex-wrap:wrap; align-items:center; justify-content:space-between;}
-    .brand{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;}
-    .brand h1{font-size:18px; margin:0; letter-spacing:.2px;}
-    .meta{display:flex; gap:12px; align-items:center; color:var(--muted); font-size:13px; flex-wrap:wrap;}
-    .pill{
-      border:1px solid var(--border);
-      background: rgba(255,255,255,.03);
-      padding:6px 10px;
-      border-radius:999px;
-      display:inline-flex;
-      gap:8px;
-      align-items:center;
-      box-shadow: 0 1px 0 rgba(255,255,255,.05) inset;
-      flex-wrap:wrap;
-    }
-    .controls{
-      display:flex; gap:10px; flex-wrap:wrap; align-items:center;
-      width:100%;
-      margin-top:10px;
-    }
-    input, select, button{
-      border-radius:12px;
-      border:1px solid var(--border);
-      background: rgba(255,255,255,.03);
-      color:var(--text);
-      padding:10px 12px;
-      outline:none;
-    }
-    input::placeholder{color:rgba(232,238,252,.55)}
-    input:focus, select:focus{
-      border-color: rgba(110,168,254,.6);
-      box-shadow: 0 0 0 3px rgba(110,168,254,.18);
-    }
-    button{
-      cursor:pointer;
-      background: rgba(110,168,254,.14);
-      border-color: rgba(110,168,254,.35);
-      font-weight:600;
-    }
-    button:hover{background: rgba(110,168,254,.22)}
-    .dangerBtn{
-      background: rgba(255,92,92,.14);
-      border-color: rgba(255,92,92,.35);
-    }
-    .dangerBtn:hover{background: rgba(255,92,92,.22)}
-    .grow{flex:1; min-width:220px;}
+    <!-- React (CDN) -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <!-- Babel to run JSX directly in the browser (fine for an internal tool / small app) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    main{max-width:1200px; margin:0 auto; padding:16px;}
-    .board{
-      display:grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap:14px;
-    }
-    @media (max-width: 980px){
-      .board{grid-template-columns:1fr}
-    }
-    .col{
-      background: linear-gradient(180deg, rgba(16,26,46,.78), rgba(14,23,42,.78));
-      border:1px solid var(--border);
-      border-radius:18px;
-      box-shadow: var(--shadow);
-      overflow:hidden;
-      min-height:360px;
-      display:flex;
-      flex-direction:column;
-    }
-    .colhead{
-      padding:12px 12px 10px;
-      border-bottom:1px solid var(--border);
-      display:flex;
-      align-items:flex-start;
-      justify-content:space-between;
-      gap:10px;
-    }
-    .coltitle{display:flex; flex-direction:column; gap:6px;}
-    .coltitle strong{font-size:14px; letter-spacing:.2px;}
-    .colsub{
-      display:flex; align-items:center; gap:8px; flex-wrap:wrap;
-      font-size:12px; color:var(--muted);
-    }
+    <style>
+      :root {
+        --bg: #0b1020;
+        --card: #121a33;
+        --muted: rgba(255,255,255,.65);
+        --text: rgba(255,255,255,.92);
+        --border: rgba(255,255,255,.12);
+        --shadow: 0 10px 25px rgba(0,0,0,.35);
+        --good: #1db954;
+        --warn: #ffb020;
+        --bad: #ff4d4d;
+        --pill: rgba(255,255,255,.12);
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+        background: radial-gradient(1200px 700px at 20% 0%, #15204a 0%, var(--bg) 55%);
+        color: var(--text);
+      }
+      .wrap { max-width: 1200px; margin: 0 auto; padding: 20px; }
+      .topbar {
+        display: flex; gap: 12px; align-items: center; justify-content: space-between;
+        padding: 14px 16px; border: 1px solid var(--border); border-radius: 16px;
+        background: rgba(18,26,51,.78); box-shadow: var(--shadow);
+        backdrop-filter: blur(8px);
+      }
+      .title {
+        display:flex; flex-direction: column; gap: 2px;
+      }
+      .title h1 { font-size: 18px; margin: 0; }
+      .meta { font-size: 12px; color: var(--muted); display:flex; gap: 14px; flex-wrap: wrap; }
+      .controls { display:flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+      input, select, button {
+        border: 1px solid var(--border);
+        background: rgba(255,255,255,.06);
+        color: var(--text);
+        border-radius: 12px;
+        padding: 10px 12px;
+        font-size: 14px;
+        outline: none;
+      }
+      input::placeholder { color: rgba(255,255,255,.45); }
+      button { cursor: pointer; }
+      button.primary {
+        background: rgba(29,185,84,.15);
+        border-color: rgba(29,185,84,.35);
+      }
+      button.danger {
+        background: rgba(255,77,77,.12);
+        border-color: rgba(255,77,77,.35);
+      }
+      .tabs {
+        margin-top: 14px;
+        display: flex; gap: 10px; flex-wrap: wrap;
+      }
+      .tab {
+        padding: 10px 12px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        background: rgba(255,255,255,.06);
+        cursor: pointer;
+      }
+      .tab.active {
+        background: rgba(255,255,255,.12);
+        border-color: rgba(255,255,255,.20);
+      }
 
-    .indicator{
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      padding:4px 8px;
-      border-radius:999px;
-      border:1px solid var(--border);
-      background: rgba(255,255,255,.03);
-      color: var(--text);
-    }
-    .dot{
-      width:10px; height:10px; border-radius:999px;
-      background: var(--danger);
-      box-shadow: 0 0 0 3px rgba(255,92,92,.14);
-    }
-    .dot.ok{
-      background: var(--ok);
-      box-shadow: 0 0 0 3px rgba(46,204,113,.14);
-    }
-    .targetInput{
-      width:86px;
-      padding:6px 8px;
-      border-radius:10px;
-      font-size:12px;
-    }
+      .board {
+        margin-top: 14px;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+      }
+      @media (max-width: 980px) {
+        .board { grid-template-columns: repeat(2, 1fr); }
+      }
+      @media (max-width: 560px) {
+        .board { grid-template-columns: 1fr; }
+      }
 
-    .dropzone{
-      padding:12px;
-      display:flex;
-      flex-direction:column;
-      gap:10px;
-      flex:1;
-    }
-    .dropzone.dragover{
-      outline:2px dashed rgba(110,168,254,.6);
-      outline-offset:-6px;
-      background: rgba(110,168,254,.07);
-    }
+      .col {
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        background: rgba(18,26,51,.65);
+        box-shadow: var(--shadow);
+        min-height: 420px;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      .colHeader {
+        padding: 12px 12px 10px 12px;
+        border-bottom: 1px solid var(--border);
+        display:flex; align-items:center; justify-content: space-between;
+      }
+      .colHeader h2 { margin: 0; font-size: 14px; letter-spacing: .2px; }
+      .colHeader span { font-size: 12px; color: var(--muted); }
+      .dropZone {
+        padding: 12px;
+        display:flex;
+        flex-direction: column;
+        gap: 10px;
+        flex: 1;
+      }
+      .hint {
+        font-size: 12px; color: rgba(255,255,255,.55);
+        border: 1px dashed rgba(255,255,255,.18);
+        border-radius: 14px;
+        padding: 10px 12px;
+      }
+      .card {
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 12px;
+        background: rgba(255,255,255,.06);
+        box-shadow: 0 8px 18px rgba(0,0,0,.25);
+      }
+      .row { display:flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+      .cardTop { display:flex; align-items:flex-start; justify-content: space-between; gap: 10px; }
+      .name {
+        font-weight: 700;
+        font-size: 14px;
+        margin: 0;
+      }
+      .small { font-size: 12px; color: var(--muted); }
+      .pill {
+        display:inline-flex; align-items:center; gap: 6px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: var(--pill);
+        border: 1px solid rgba(255,255,255,.14);
+        font-size: 12px;
+        white-space: nowrap;
+      }
+      .badge {
+        display:inline-flex;
+        align-items:center;
+        gap: 8px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(255,255,255,.18);
+        font-size: 12px;
+      }
+      .badge.bhd {
+        background: rgba(29,185,84,.15);
+        border-color: rgba(29,185,84,.35);
+      }
+      .badge.notbhd {
+        background: rgba(255,255,255,.08);
+      }
+      .actions { display:flex; gap: 8px; align-items: center; }
+      .iconBtn {
+        padding: 8px 10px;
+        border-radius: 12px;
+        font-size: 12px;
+      }
+      .formRow { display:flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+      .panel {
+        margin-top: 14px;
+        padding: 14px;
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        background: rgba(18,26,51,.55);
+        box-shadow: var(--shadow);
+      }
+      .panel h3 { margin: 0 0 10px 0; font-size: 14px; }
+      .grid2 { display:grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+      @media (max-width: 800px) { .grid2 { grid-template-columns: 1fr; } }
+      .mutedLine { font-size: 12px; color: var(--muted); margin-top: 8px; }
+      .dragOver {
+        outline: 2px solid rgba(255,255,255,.22);
+        outline-offset: -2px;
+        background: rgba(255,255,255,.04);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
 
-    .card{
-      background: rgba(255,255,255,.04);
-      border:1px solid var(--border);
-      border-radius:16px;
-      padding:10px 10px 8px;
-      box-shadow: 0 2px 0 rgba(255,255,255,.04) inset;
-      display:flex;
-      flex-direction:column;
-      gap:8px;
-    }
-    .card[draggable="true"]{cursor:grab}
-    .card:active{cursor:grabbing}
+    <script type="text/babel">
+      const { useEffect, useMemo, useRef, useState } = React;
 
-    .cardTop{
-      display:flex; align-items:flex-start; justify-content:space-between; gap:10px;
-    }
-    .leftRow{
-      display:flex; gap:10px; align-items:flex-start; min-width:0;
-      flex:1;
-    }
-    .avatar{
-      width:36px; height:36px;
-      border-radius:999px;
-      border:1px solid var(--border);
-      background: rgba(255,255,255,.05);
-      overflow:hidden;
-      flex:0 0 auto;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      font-weight:800;
-      color: rgba(232,238,252,.75);
-    }
-    .avatar img{width:100%; height:100%; object-fit:cover; display:block;}
-    .who{display:flex; flex-direction:column; gap:2px; min-width:0; flex:1;}
-    .name{
-      font-weight:700;
-      font-size:14px;
-      line-height:1.2;
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-    }
-    .login{
-      font-size:12px;
-      color:var(--muted);
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-    }
+      const ROLES = [
+        "Problem Solver",
+        "Picker",
+        "Stower",
+        "Process Guide - Pick",
+        "Process Guide - Stow",
+        "Decanter",
+        "Pick Transporter",
+        "Stow Transporter",
+        "WaterSpider",
+        "ICQA",
+      ];
 
-    .chips{display:flex; gap:6px; flex-wrap:wrap; align-items:center;}
-    .chip{
-      font-size:11px;
-      padding:5px 8px;
-      border-radius:999px;
-      background: var(--chip);
-      border:1px solid var(--border);
-      color: var(--text);
-      display:inline-flex; align-items:center; gap:6px;
-      max-width: 100%;
-    }
-    .chip.blue{
-      background: rgba(31,111,235,.18);
-      border-color: rgba(31,111,235,.45);
-      color: #dbeafe;
-    }
-    .chip.teal{
-      background: rgba(14,165,165,.16);
-      border-color: rgba(14,165,165,.45);
-      color: #d8ffff;
-    }
-    .chip.role{
-      background: rgba(124,58,237,.16);
-      border-color: rgba(124,58,237,.45);
-      color: #efe6ff;
-    }
-    .chip .clip{
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-      max-width: 240px;
-      display:inline-block;
-      vertical-align:bottom;
-    }
+      const STAFFING_COLS = [
+        { key: "planned", title: "Planned" },
+        { key: "onFloor", title: "On Floor" },
+        { key: "break", title: "Break / Support" },
+        { key: "off", title: "Off / Not Assigned" },
+      ];
 
-    .badgeAvatar{
-      width:16px; height:16px;
-      border-radius:999px;
-      border:1px solid rgba(255,255,255,.25);
-      overflow:hidden;
-      background: rgba(255,255,255,.08);
-      display:inline-flex; align-items:center; justify-content:center;
-      flex:0 0 auto;
-    }
-    .badgeAvatar img{width:100%; height:100%; object-fit:cover; display:block;}
+      const UNI_COLS = [
+        { key: "todo", title: "To Do" },
+        { key: "doing", title: "In Progress" },
+        { key: "done", title: "Done" },
+        { key: "blocked", title: "Blocked" },
+      ];
 
-    .miniBtn{
-      font-size:12px;
-      padding:6px 8px;
-      border-radius:10px;
-      background: rgba(255,255,255,.04);
-      border:1px solid var(--border);
-      color: var(--text);
-      cursor:pointer;
-    }
-    .miniBtn:hover{background: rgba(255,255,255,.07)}
+      const todayStr = () => {
+        const d = new Date();
+        return d.toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+      };
 
-    /* Modal */
-    .modalBack{
-      position:fixed; inset:0; background: rgba(0,0,0,.55);
-      display:none; align-items:center; justify-content:center;
-      padding:18px;
-      z-index:50;
-    }
-    .modal{
-      width:min(760px, 100%);
-      background: linear-gradient(180deg, rgba(16,26,46,.98), rgba(14,23,42,.98));
-      border:1px solid var(--border);
-      border-radius:18px;
-      box-shadow: var(--shadow);
-      overflow:hidden;
-    }
-    .modalHead{
-      padding:12px 14px;
-      border-bottom:1px solid var(--border);
-      display:flex; align-items:center; justify-content:space-between;
-      gap:10px;
-    }
-    .modalBody{padding:14px; display:grid; gap:12px;}
-    .modalFoot{
-      padding:12px 14px;
-      border-top:1px solid var(--border);
-      display:flex; justify-content:flex-end; gap:10px;
-      flex-wrap:wrap;
-    }
-    label{font-size:12px; color:var(--muted); display:block; margin-bottom:6px;}
-    .grid2{display:grid; grid-template-columns: 1fr 1fr; gap:10px;}
-    @media (max-width:560px){ .grid2{grid-template-columns:1fr} }
+      const nowStamp = () => new Date().toLocaleString();
 
-    .photoRow{
-      display:flex; gap:12px; align-items:center; flex-wrap:wrap;
-      border:1px solid var(--border);
-      background: rgba(255,255,255,.02);
-      padding:10px;
-      border-radius:14px;
-    }
-    .photoPreview{
-      width:56px; height:56px;
-      border-radius:999px;
-      border:1px solid var(--border);
-      background: rgba(255,255,255,.04);
-      overflow:hidden;
-      display:flex; align-items:center; justify-content:center;
-      font-weight:800;
-      color: rgba(232,238,252,.75);
-      flex:0 0 auto;
-    }
-    .photoPreview img{width:100%; height:100%; object-fit:cover; display:block;}
-    .photoActions{display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
-    .fileInput{
-      font-size:12px;
-      padding:8px 10px;
-      border-radius:12px;
-      border:1px solid var(--border);
-      background: rgba(255,255,255,.03);
-      color: var(--muted);
-      max-width: 360px;
-    }
+      const uid = () => Math.random().toString(16).slice(2) + "-" + Math.random().toString(16).slice(2);
 
-    .checks{
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-      align-items:center;
-      border:1px solid var(--border);
-      background: rgba(255,255,255,.02);
-      padding:10px;
-      border-radius:14px;
-    }
-    .check{
-      display:flex;
-      gap:8px;
-      align-items:center;
-      padding:6px 8px;
-      border:1px solid var(--border);
-      background: rgba(255,255,255,.03);
-      border-radius:12px;
-    }
-    .check input{width:16px; height:16px; padding:0}
-    .check span{font-size:12px; color: var(--text)}
-  </style>
-</head>
-<body>
+      function safeParse(json, fallback) {
+        try { return JSON.parse(json); } catch { return fallback; }
+      }
 
-<header>
-  <div class="wrap">
-    <div class="topbar">
-      <div class="brand">
-        <h1>Staffing Digital Whiteboard</h1>
-        <div class="pill" title="Auto-updating date">
-          <span id="todayTxt"></span>
-        </div>
-      </div>
+      function App() {
+        // Simple "login name" (local only, stored in localStorage)
+        const [loginName, setLoginName] = useState(() => localStorage.getItem("swb_login") || "");
+        const [activeTab, setActiveTab] = useState("staffing"); // staffing | university
+        const [lastUpdated, setLastUpdated] = useState(() => localStorage.getItem("swb_lastUpdated") || nowStamp());
 
-      <div class="meta">
-        <div class="pill" title="Your local login name (stored on this device)">
-          <span>Logged in as:</span>
-          <strong id="loggedInAs">Not set</strong>
-          <button class="miniBtn" id="btnLogin">Set</button>
-        </div>
+        const storageKey = useMemo(() => `swb_state_${loginName || "anonymous"}`, [loginName]);
 
-        <div class="pill" title="Headcount targets (saved on this device)">
-          <span style="color:var(--muted)">Targets:</span>
-          <span style="display:inline-flex;gap:8px;flex-wrap:wrap;align-items:center">
-            <span>Inbound</span><input id="tInbound" class="targetInput" type="number" min="0" step="1" />
-            <span>Outbound</span><input id="tOutbound" class="targetInput" type="number" min="0" step="1" />
-            <span>Demora</span><input id="tDemora" class="targetInput" type="number" min="0" step="1" />
-          </span>
-        </div>
-      </div>
-    </div>
-
-    <div class="controls">
-      <input id="search" class="grow" placeholder="Search associate name, login, role, or badge…" />
-      <button id="btnAdd">+ Add Associate</button>
-      <button id="btnClear" class="dangerBtn" title="Clears board data on this device">Clear Board</button>
-    </div>
-  </div>
-</header>
-
-<main>
-  <div class="board" id="board"></div>
-</main>
-
-<!-- Add/Edit Modal -->
-<div class="modalBack" id="modalBack" aria-hidden="true">
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-    <div class="modalHead">
-      <strong id="modalTitle">Add Associate</strong>
-      <button class="miniBtn" id="btnCloseModal">Close</button>
-    </div>
-
-    <div class="modalBody">
-      <div class="grid2">
-        <div>
-          <label for="inpName">Associate name</label>
-          <input id="inpName" placeholder="e.g., Jordan Smith" />
-        </div>
-        <div>
-          <label for="inpLogin">Login</label>
-          <input id="inpLogin" placeholder="e.g., jsmith" />
-        </div>
-      </div>
-
-      <div>
-        <label for="selDept">Department</label>
-        <select id="selDept">
-          <option value="Inbound">Inbound</option>
-          <option value="Outbound">Outbound</option>
-          <option value="Demora">Demora</option>
-        </select>
-      </div>
-
-      <!-- Shift badges (multi-select) -->
-      <div>
-        <label>Badges</label>
-        <div class="checks">
-          <label class="check" title="Back Half Days (Blue badge)">
-            <input id="chkBHD" type="checkbox" />
-            <span>Back Half Days (Blue)</span>
-          </label>
-
-          <label class="check" title="Shift Pattern Co-Host badge">
-            <input id="chkCOHOST" type="checkbox" />
-            <span>Shift Pattern Co-Host</span>
-          </label>
-        </div>
-      </div>
-
-      <!-- Role/Path (multi-select) -->
-      <div>
-        <label>Role / Path (multi-select)</label>
-        <div class="checks">
-          <label class="check"><input id="rProblemSolver" type="checkbox" /><span>Problem Solver</span></label>
-          <label class="check"><input id="rPicker" type="checkbox" /><span>Picker</span></label>
-          <label class="check"><input id="rStower" type="checkbox" /><span>Stower</span></label>
-          <label class="check"><input id="rPGPick" type="checkbox" /><span>Process Guide - Pick</span></label>
-          <label class="check"><input id="rPGStow" type="checkbox" /><span>Process Guide - Stow</span></label>
-          <label class="check"><input id="rDecanter" type="checkbox" /><span>Decanter</span></label>
-          <label class="check"><input id="rPickTransporter" type="checkbox" /><span>Pick Transporter</span></label>
-          <label class="check"><input id="rStowTransporter" type="checkbox" /><span>Stow Transporter</span></label>
-          <label class="check"><input id="rWaterSpider" type="checkbox" /><span>WaterSpider</span></label>
-          <label class="check"><input id="rICQA" type="checkbox" /><span>ICQA</span></label>
-        </div>
-      </div>
-
-      <div>
-        <label>Photo on badge (Upload Image)</label>
-        <div class="photoRow">
-          <div class="photoPreview" id="photoPreview">
-            <span id="photoInitial">?</span>
-            <img id="photoImg" alt="" style="display:none;" />
-          </div>
-          <div class="photoActions">
-            <input class="fileInput" id="inpPhoto" type="file" accept="image/*" />
-            <button class="miniBtn" id="btnRemovePhoto" type="button">Remove Photo</button>
-          </div>
-          <div style="color:var(--muted);font-size:12px;">
-            Stored locally on this device (no URLs).
-          </div>
-        </div>
-      </div>
-
-      <div style="display:flex;justify-content:space-between;gap:10px;color:var(--muted);font-size:12px;">
-        <span>Tip: drag-and-drop cards between departments.</span>
-        <span id="editId" style="display:none;"></span>
-      </div>
-    </div>
-
-    <div class="modalFoot">
-      <button id="btnDelete" class="dangerBtn" style="display:none;">Delete</button>
-      <button id="btnSave">Save</button>
-    </div>
-  </div>
-</div>
-
-<!-- Login Modal -->
-<div class="modalBack" id="loginBack" aria-hidden="true">
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
-    <div class="modalHead">
-      <strong id="loginTitle">Set Login Name</strong>
-      <button class="miniBtn" id="btnCloseLogin">Close</button>
-    </div>
-    <div class="modalBody">
-      <div>
-        <label for="inpManager">Your name (shown as “Logged in as”)</label>
-        <input id="inpManager" placeholder="e.g., Miguel Davalos" />
-      </div>
-      <div style="display:flex;justify-content:space-between;gap:10px;color:var(--muted);font-size:12px;">
-        <span>This is a simple local login (no passwords).</span>
-        <span></span>
-      </div>
-    </div>
-    <div class="modalFoot">
-      <button id="btnSaveLogin">Save</button>
-    </div>
-  </div>
-</div>
-
-<script>
-(() => {
-  const STORAGE_KEY = "staffing_whiteboard_v5";
-  const LOGIN_KEY = "staffing_whiteboard_login_v1";
-  const TARGETS_KEY = "staffing_whiteboard_targets_v1";
-
-  const departments = ["Inbound", "Outbound", "Demora"];
-
-  const ROLE_VALUES = [
-    "Problem Solver",
-    "Picker",
-    "Stower",
-    "Process Guide - Pick",
-    "Process Guide - Stow",
-    "Decanter",
-    "Pick Transporter",
-    "Stow Transporter",
-    "WaterSpider",
-    "ICQA"
-  ];
-
-  /** State shape:
-   * { cards: [{id, name, login, dept, badges:[], roles:[], photoDataUrl}], updatedAt }
-   */
-  const state = loadState();
-
-  // Elements
-  const boardEl = document.getElementById("board");
-  const searchEl = document.getElementById("search");
-  const btnAdd = document.getElementById("btnAdd");
-  const btnClear = document.getElementById("btnClear");
-
-  const todayTxt = document.getElementById("todayTxt");
-  const loggedInAs = document.getElementById("loggedInAs");
-  const btnLogin = document.getElementById("btnLogin");
-
-  // Targets
-  const tInbound = document.getElementById("tInbound");
-  const tOutbound = document.getElementById("tOutbound");
-  const tDemora = document.getElementById("tDemora");
-  const targets = loadTargets();
-
-  // Add/Edit modal
-  const modalBack = document.getElementById("modalBack");
-  const btnCloseModal = document.getElementById("btnCloseModal");
-  const btnSave = document.getElementById("btnSave");
-  const btnDelete = document.getElementById("btnDelete");
-
-  const inpName = document.getElementById("inpName");
-  const inpLogin = document.getElementById("inpLogin");
-  const selDept = document.getElementById("selDept");
-  const chkBHD = document.getElementById("chkBHD");
-  const chkCOHOST = document.getElementById("chkCOHOST");
-  const editId = document.getElementById("editId");
-  const modalTitle = document.getElementById("modalTitle");
-
-  // Roles checkboxes
-  const roleCheckboxes = [
-    { id: "rProblemSolver", value: "Problem Solver" },
-    { id: "rPicker", value: "Picker" },
-    { id: "rStower", value: "Stower" },
-    { id: "rPGPick", value: "Process Guide - Pick" },
-    { id: "rPGStow", value: "Process Guide - Stow" },
-    { id: "rDecanter", value: "Decanter" },
-    { id: "rPickTransporter", value: "Pick Transporter" },
-    { id: "rStowTransporter", value: "Stow Transporter" },
-    { id: "rWaterSpider", value: "WaterSpider" },
-    { id: "rICQA", value: "ICQA" },
-  ].map(r => ({ ...r, el: document.getElementById(r.id) }));
-
-  // Photo upload
-  const inpPhoto = document.getElementById("inpPhoto");
-  const btnRemovePhoto = document.getElementById("btnRemovePhoto");
-  const photoImg = document.getElementById("photoImg");
-  const photoInitial = document.getElementById("photoInitial");
-  let modalPhotoDataUrl = "";
-
-  // Login modal
-  const loginBack = document.getElementById("loginBack");
-  const btnCloseLogin = document.getElementById("btnCloseLogin");
-  const btnSaveLogin = document.getElementById("btnSaveLogin");
-  const inpManager = document.getElementById("inpManager");
-
-  // Date
-  function setDate() {
-    const d = new Date();
-    const fmt = d.toLocaleDateString(undefined, { weekday:"short", year:"numeric", month:"short", day:"numeric" });
-    todayTxt.textContent = fmt;
-  }
-  setDate();
-  setInterval(setDate, 60_000);
-
-  // Login
-  function loadLogin() {
-    const v = localStorage.getItem(LOGIN_KEY) || "";
-    loggedInAs.textContent = v.trim() ? v : "Not set";
-    inpManager.value = v;
-  }
-  function saveLogin() {
-    localStorage.setItem(LOGIN_KEY, (inpManager.value || "").trim());
-    loadLogin();
-    closeLogin();
-  }
-  loadLogin();
-
-  // Targets UI
-  tInbound.value = targets.Inbound;
-  tOutbound.value = targets.Outbound;
-  tDemora.value = targets.Demora;
-
-  function clampNonNegInt(v){
-    const n = Math.max(0, Math.floor(Number(v || 0)));
-    return Number.isFinite(n) ? n : 0;
-  }
-  function onTargetsChange(){
-    targets.Inbound = clampNonNegInt(tInbound.value);
-    targets.Outbound = clampNonNegInt(tOutbound.value);
-    targets.Demora = clampNonNegInt(tDemora.value);
-    tInbound.value = targets.Inbound;
-    tOutbound.value = targets.Outbound;
-    tDemora.value = targets.Demora;
-    saveTargets(targets);
-    render();
-  }
-  tInbound.addEventListener("change", onTargetsChange);
-  tOutbound.addEventListener("change", onTargetsChange);
-  tDemora.addEventListener("change", onTargetsChange);
-
-  // Render
-  function render() {
-    const q = (searchEl.value || "").trim().toLowerCase();
-
-    boardEl.innerHTML = "";
-    for (const dept of departments) {
-      const col = document.createElement("section");
-      col.className = "col";
-
-      const head = document.createElement("div");
-      head.className = "colhead";
-
-      const title = document.createElement("div");
-      title.className = "coltitle";
-
-      const strong = document.createElement("strong");
-      strong.textContent = dept;
-
-      const sub = document.createElement("div");
-      sub.className = "colsub";
-
-      const count = state.cards.filter(c => c.dept === dept).length;
-      const target = targets[dept] ?? 0;
-
-      const indicator = document.createElement("span");
-      indicator.className = "indicator";
-
-      const dot = document.createElement("span");
-      dot.className = "dot";
-
-      const ok = (target === 0) ? true : (count >= target);
-      if (ok) dot.classList.add("ok");
-
-      const text = document.createElement("span");
-      text.textContent = `HC ${count} / Target ${target}`;
-
-      indicator.append(dot, text);
-
-      const addBtn = document.createElement("button");
-      addBtn.className = "miniBtn";
-      addBtn.textContent = "Add";
-      addBtn.addEventListener("click", () => openModal({ dept }));
-
-      sub.appendChild(indicator);
-      title.append(strong, sub);
-      head.append(title, addBtn);
-
-      const zone = document.createElement("div");
-      zone.className = "dropzone";
-      zone.dataset.dept = dept;
-
-      zone.addEventListener("dragover", (e) => {
-        e.preventDefault();
-        zone.classList.add("dragover");
-      });
-      zone.addEventListener("dragleave", () => zone.classList.remove("dragover"));
-      zone.addEventListener("drop", (e) => {
-        e.preventDefault();
-        zone.classList.remove("dragover");
-        const id = e.dataTransfer.getData("text/plain");
-        if (!id) return;
-        moveCard(id, dept);
-      });
-
-      const cards = state.cards
-        .filter(c => c.dept === dept)
-        .filter(c => {
-          if (!q) return true;
-          const badgesText = (c.badges || []).join(" ").toLowerCase();
-          const rolesText = (c.roles || []).join(" ").toLowerCase();
-          return (c.name || "").toLowerCase().includes(q)
-              || (c.login || "").toLowerCase().includes(q)
-              || badgesText.includes(q)
-              || rolesText.includes(q);
+        // Load state per login
+        const [state, setState] = useState(() => {
+          const raw = localStorage.getItem(storageKey);
+          return raw ? safeParse(raw, null) : null;
         });
 
-      for (const c of cards) zone.appendChild(renderCard(c, q));
+        // Initialize if none
+        useEffect(() => {
+          const raw = localStorage.getItem(storageKey);
+          if (raw) {
+            setState(safeParse(raw, defaultState()));
+          } else {
+            setState(defaultState());
+          }
+          // eslint-disable-next-line react-hooks/exhaustive-deps
+        }, [storageKey]);
 
-      col.append(head, zone);
-      boardEl.appendChild(col);
-    }
-  }
+        function defaultState() {
+          return {
+            staffing: {
+              cards: [],
+            },
+            university: {
+              cards: [],
+            },
+          };
+        }
 
-  function chipWithAvatar(baseClass, label, c){
-    const chip = document.createElement("span");
-    chip.className = "chip " + baseClass;
+        function touchUpdate(nextState) {
+          setState(nextState);
+          const stamp = nowStamp();
+          setLastUpdated(stamp);
+          localStorage.setItem("swb_lastUpdated", stamp);
+          localStorage.setItem(storageKey, JSON.stringify(nextState));
+        }
 
-    if (c.photoDataUrl) {
-      const bav = document.createElement("span");
-      bav.className = "badgeAvatar";
-      const bi = document.createElement("img");
-      bi.src = c.photoDataUrl;
-      bi.alt = "";
-      bav.appendChild(bi);
-      chip.appendChild(bav);
-    }
+        // Persist loginName
+        useEffect(() => {
+          localStorage.setItem("swb_login", loginName);
+        }, [loginName]);
 
-    const txt = document.createElement("span");
-    txt.className = "clip";
-    txt.textContent = label;
-    chip.appendChild(txt);
-    return chip;
-  }
+        // If no login name, still allow use, but encourage setting it
+        const canUse = true;
 
-  function renderCard(c, searching) {
-    const card = document.createElement("div");
-    card.className = "card";
-    card.draggable = true;
-    card.dataset.id = c.id;
+        function resetBoard() {
+          touchUpdate(defaultState());
+        }
 
-    card.addEventListener("dragstart", (e) => {
-      e.dataTransfer.setData("text/plain", c.id);
-      e.dataTransfer.effectAllowed = "move";
-    });
+        if (!state) return null;
 
-    const top = document.createElement("div");
-    top.className = "cardTop";
+        return (
+          <div className="wrap">
+            <div className="topbar">
+              <div className="title">
+                <h1>Staffing Digital Whiteboard</h1>
+                <div className="meta">
+                  <span><strong>Today:</strong> {todayStr()}</span>
+                  <span><strong>Last Updated:</strong> {lastUpdated}</span>
+                  <span><strong>Login Name:</strong> {loginName ? loginName : "Not set"}</span>
+                </div>
+              </div>
 
-    const left = document.createElement("div");
-    left.className = "leftRow";
+              <div className="controls">
+                <input
+                  value={loginName}
+                  onChange={(e) => setLoginName(e.target.value.trimStart())}
+                  placeholder="Enter login name (e.g., migueld)"
+                  style={{ minWidth: 240 }}
+                />
+                <button className="danger" onClick={resetBoard} title="Clears both boards for this login">
+                  Clear Boards
+                </button>
+              </div>
+            </div>
 
-    const av = document.createElement("div");
-    av.className = "avatar";
-    const initial = (c.name || c.login || "?").trim().charAt(0).toUpperCase() || "?";
+            <div className="tabs">
+              <div className={"tab " + (activeTab === "staffing" ? "active" : "")} onClick={() => setActiveTab("staffing")}>
+                Staffing Board
+              </div>
+              <div className={"tab " + (activeTab === "university" ? "active" : "")} onClick={() => setActiveTab("university")}>
+                University Assignments
+              </div>
+            </div>
 
-    if (c.photoDataUrl) {
-      const img = document.createElement("img");
-      img.src = c.photoDataUrl;
-      img.alt = "";
-      av.innerHTML = "";
-      av.appendChild(img);
-    } else {
-      av.textContent = initial;
-    }
+            {activeTab === "staffing" ? (
+              <StaffingBoard
+                data={state.staffing}
+                onChange={(nextStaffing) => touchUpdate({ ...state, staffing: nextStaffing })}
+                canUse={canUse}
+                loginName={loginName}
+              />
+            ) : (
+              <UniversityBoard
+                data={state.university}
+                onChange={(nextUni) => touchUpdate({ ...state, university: nextUni })}
+                canUse={canUse}
+                loginName={loginName}
+              />
+            )}
 
-    const who = document.createElement("div");
-    who.className = "who";
+            <div className="panel">
+              <h3>Notes</h3>
+              <div className="mutedLine">
+                • This app intentionally has <strong>no Import/Export JSON</strong>. Data is saved automatically in your browser (localStorage) per login name.<br/>
+                • “Last Updated” changes whenever you add/move/edit/delete a card—meant to match real-life staffing changes.
+              </div>
+            </div>
+          </div>
+        );
+      }
 
-    const name = document.createElement("div");
-    name.className = "name";
-    name.textContent = c.name || "(No name)";
+      function StaffingBoard({ data, onChange, canUse, loginName }) {
+        const [newName, setNewName] = useState("");
+        const [dept, setDept] = useState("Demora");
+        const [role, setRole] = useState(ROLES[0]);
+        const [bhd, setBhd] = useState(true);
 
-    const login = document.createElement("div");
-    login.className = "login";
-    login.textContent = c.login ? `@${c.login}` : "(No login)";
+        const [dragOverCol, setDragOverCol] = useState(null);
 
-    who.append(name, login);
-    left.append(av, who);
+        function addCard() {
+          const trimmed = newName.trim();
+          if (!trimmed) return;
 
-    const actions = document.createElement("div");
-    const editBtn = document.createElement("button");
-    editBtn.className = "miniBtn";
-    editBtn.textContent = "Edit";
-    editBtn.addEventListener("click", () => openModal(c));
-    actions.appendChild(editBtn);
+          const card = {
+            id: uid(),
+            personName: trimmed,
+            dept,
+            role,
+            bhd,
+            col: "planned",
+            createdBy: loginName || "anonymous",
+            createdAt: new Date().toISOString(),
+          };
+          onChange({ ...data, cards: [card, ...data.cards] });
+          setNewName("");
+        }
 
-    top.append(left, actions);
+        function removeCard(id) {
+          onChange({ ...data, cards: data.cards.filter(c => c.id !== id) });
+        }
 
-    const chips = document.createElement("div");
-    chips.className = "chips";
+        function updateCard(id, patch) {
+          onChange({
+            ...data,
+            cards: data.cards.map(c => (c.id === id ? { ...c, ...patch } : c)),
+          });
+        }
 
-    // badges
-    const badges = Array.isArray(c.badges) ? c.badges : [];
-    for (const b of badges) {
-      if (b === "BHD") chips.appendChild(chipWithAvatar("blue", "Back Half Days", c));
-      if (b === "COHOST") chips.appendChild(chipWithAvatar("teal", "Shift Pattern Co-Host", c));
-    }
+        function onDragStart(e, cardId) {
+          e.dataTransfer.setData("text/plain", cardId);
+          e.dataTransfer.effectAllowed = "move";
+        }
 
-    // roles (multi)
-    const roles = Array.isArray(c.roles) ? c.roles : [];
-    for (const r of roles) {
-      chips.appendChild(chipWithAvatar("role", r, c));
-    }
+        function onDrop(e, colKey) {
+          e.preventDefault();
+          const cardId = e.dataTransfer.getData("text/plain");
+          if (!cardId) return;
+          updateCard(cardId, { col: colKey });
+          setDragOverCol(null);
+        }
 
-    if (searching) {
-      const deptChip = document.createElement("span");
-      deptChip.className = "chip";
-      deptChip.textContent = c.dept;
-      chips.appendChild(deptChip);
-    }
+        function allowDrop(e) {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "move";
+        }
 
-    card.append(top);
-    if (chips.childElementCount) card.append(chips);
+        const cardsByCol = useMemo(() => {
+          const m = {};
+          for (const col of STAFFING_COLS) m[col.key] = [];
+          for (const c of data.cards) {
+            (m[c.col] || (m[c.col] = [])).push(c);
+          }
+          return m;
+        }, [data.cards]);
 
-    return card;
-  }
+        return (
+          <>
+            <div className="panel">
+              <h3>Add associate</h3>
+              <div className="formRow">
+                <input
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder="Associate name"
+                  style={{ minWidth: 240 }}
+                  disabled={!canUse}
+                />
 
-  // State ops
-  function addCard(data) {
-    state.cards.unshift({
-      id: crypto.randomUUID(),
-      name: (data.name || "").trim(),
-      login: (data.login || "").trim(),
-      dept: data.dept || "Inbound",
-      badges: data.badges || [],
-      roles: data.roles || [],
-      photoDataUrl: data.photoDataUrl || ""
-    });
-    touch();
-  }
+                <select value={dept} onChange={(e) => setDept(e.target.value)} disabled={!canUse}>
+                  <option value="Demora">Demora</option>
+                  <option value="LaborShare">LaborShare</option>
+                </select>
 
-  function updateCard(id, data) {
-    const i = state.cards.findIndex(c => c.id === id);
-    if (i === -1) return;
-    state.cards[i] = {
-      ...state.cards[i],
-      name: (data.name || "").trim(),
-      login: (data.login || "").trim(),
-      dept: data.dept || state.cards[i].dept,
-      badges: data.badges || [],
-      roles: data.roles || [],
-      photoDataUrl: data.photoDataUrl || ""
-    };
-    touch();
-  }
+                <select value={role} onChange={(e) => setRole(e.target.value)} disabled={!canUse} style={{ minWidth: 220 }}>
+                  {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
 
-  function deleteCard(id) {
-    const i = state.cards.findIndex(c => c.id === id);
-    if (i === -1) return;
-    state.cards.splice(i, 1);
-    touch();
-  }
+                <select value={bhd ? "BHD" : "NotBHD"} onChange={(e) => setBhd(e.target.value === "BHD")} disabled={!canUse}>
+                  <option value="BHD">Back Half Days</option>
+                  <option value="NotBHD">Not BHD</option>
+                </select>
 
-  function moveCard(id, newDept) {
-    const c = state.cards.find(x => x.id === id);
-    if (!c) return;
-    c.dept = newDept;
-    touch();
-  }
+                <button className="primary" onClick={addCard} disabled={!canUse}>
+                  Add
+                </button>
+              </div>
 
-  function touch() {
-    state.updatedAt = Date.now();
-    saveState(state);
-    render();
-  }
+              <div className="mutedLine">
+                Badge shows: <strong>Department</strong> + <strong>Role/Path</strong> + <strong>BHD</strong>.
+              </div>
+            </div>
 
-  // Modal logic
-  function openModal(cardOrDefaults = {}) {
-    const isEdit = !!cardOrDefaults.id;
-    modalTitle.textContent = isEdit ? "Edit Associate" : "Add Associate";
-    btnDelete.style.display = isEdit ? "inline-flex" : "none";
+            <div className="board">
+              {STAFFING_COLS.map(col => (
+                <div
+                  key={col.key}
+                  className={"col " + (dragOverCol === col.key ? "dragOver" : "")}
+                  onDragOver={(e) => { allowDrop(e); setDragOverCol(col.key); }}
+                  onDragLeave={() => setDragOverCol(null)}
+                  onDrop={(e) => onDrop(e, col.key)}
+                >
+                  <div className="colHeader">
+                    <h2>{col.title}</h2>
+                    <span>{(cardsByCol[col.key] || []).length}</span>
+                  </div>
 
-    editId.textContent = cardOrDefaults.id || "";
-    editId.style.display = "none";
+                  <div className="dropZone">
+                    {(cardsByCol[col.key] || []).length === 0 ? (
+                      <div className="hint">Drag cards here.</div>
+                    ) : null}
 
-    inpName.value = cardOrDefaults.name || "";
-    inpLogin.value = cardOrDefaults.login || "";
-    selDept.value = cardOrDefaults.dept || "Inbound";
+                    {(cardsByCol[col.key] || []).map(card => (
+                      <div
+                        key={card.id}
+                        className="card"
+                        draggable
+                        onDragStart={(e) => onDragStart(e, card.id)}
+                        title="Drag to move"
+                      >
+                        <div className="cardTop">
+                          <div>
+                            <p className="name">{card.personName}</p>
+                            <div className="row" style={{ marginTop: 8 }}>
+                              <span className="pill">{card.dept}</span>
+                              <span className={"badge " + (card.bhd ? "bhd" : "notbhd")}>
+                                {card.bhd ? "BHD" : "—"} • {card.role}
+                              </span>
+                            </div>
+                            <div className="small" style={{ marginTop: 8 }}>
+                              Added by <strong>{card.createdBy}</strong>
+                            </div>
+                          </div>
+                          <div className="actions">
+                            <button className="iconBtn" onClick={() => removeCard(card.id)}>Delete</button>
+                          </div>
+                        </div>
 
-    // badges
-    const b = Array.isArray(cardOrDefaults.badges) ? cardOrDefaults.badges : [];
-    chkBHD.checked = b.includes("BHD");
-    chkCOHOST.checked = b.includes("COHOST");
+                        <div className="formRow" style={{ marginTop: 10 }}>
+                          <select value={card.dept} onChange={(e) => updateCard(card.id, { dept: e.target.value })}>
+                            <option value="Demora">Demora</option>
+                            <option value="LaborShare">LaborShare</option>
+                          </select>
 
-    // roles
-    const roles = new Set(Array.isArray(cardOrDefaults.roles) ? cardOrDefaults.roles : []);
-    for (const r of roleCheckboxes) r.el.checked = roles.has(r.value);
+                          <select value={card.role} onChange={(e) => updateCard(card.id, { role: e.target.value })} style={{ minWidth: 220 }}>
+                            {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                          </select>
 
-    // photo
-    modalPhotoDataUrl = cardOrDefaults.photoDataUrl || "";
-    inpPhoto.value = "";
-    syncPhotoPreview();
+                          <select value={card.bhd ? "BHD" : "NotBHD"} onChange={(e) => updateCard(card.id, { bhd: e.target.value === "BHD" })}>
+                            <option value="BHD">Back Half Days</option>
+                            <option value="NotBHD">Not BHD</option>
+                          </select>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        );
+      }
 
-    modalBack.style.display = "flex";
-    modalBack.setAttribute("aria-hidden", "false");
-    setTimeout(() => inpName.focus(), 0);
-  }
+      function UniversityBoard({ data, onChange, canUse, loginName }) {
+        const [course, setCourse] = useState("");
+        const [assignment, setAssignment] = useState("");
+        const [due, setDue] = useState("");
 
-  function closeModal() {
-    modalBack.style.display = "none";
-    modalBack.setAttribute("aria-hidden", "true");
-    modalPhotoDataUrl = "";
-    inpPhoto.value = "";
-  }
+        const [dragOverCol, setDragOverCol] = useState(null);
 
-  function syncPhotoPreview(){
-    const initial = (inpName.value || inpLogin.value || "?").trim().charAt(0).toUpperCase() || "?";
-    if (modalPhotoDataUrl) {
-      photoImg.src = modalPhotoDataUrl;
-      photoImg.style.display = "block";
-      photoInitial.style.display = "none";
-    } else {
-      photoImg.src = "";
-      photoImg.style.display = "none";
-      photoInitial.textContent = initial;
-      photoInitial.style.display = "block";
-    }
-  }
+        function addAssignment() {
+          const c = course.trim();
+          const a = assignment.trim();
+          if (!c || !a) return;
 
-  inpName.addEventListener("input", () => { if (!modalPhotoDataUrl) syncPhotoPreview(); });
-  inpLogin.addEventListener("input", () => { if (!modalPhotoDataUrl) syncPhotoPreview(); });
+          const card = {
+            id: uid(),
+            course: c,
+            title: a,
+            dueDate: due ? new Date(due).toISOString() : null,
+            col: "todo",
+            createdBy: loginName || "anonymous",
+            createdAt: new Date().toISOString(),
+          };
+          onChange({ ...data, cards: [card, ...data.cards] });
+          setAssignment("");
+          setDue("");
+        }
 
-  // Photo upload
-  inpPhoto.addEventListener("change", async () => {
-    const file = inpPhoto.files && inpPhoto.files[0];
-    if (!file) return;
+        function removeCard(id) {
+          onChange({ ...data, cards: data.cards.filter(c => c.id !== id) });
+        }
 
-    const MAX_MB = 1.2;
-    if (file.size > MAX_MB * 1024 * 1024) {
-      alert("That image is a bit large. Please choose a smaller photo (about 1MB or less).");
-      inpPhoto.value = "";
-      return;
-    }
+        function updateCard(id, patch) {
+          onChange({
+            ...data,
+            cards: data.cards.map(c => (c.id === id ? { ...c, ...patch } : c)),
+          });
+        }
 
-    const dataUrl = await readFileAsDataURL(file);
-    modalPhotoDataUrl = dataUrl;
-    syncPhotoPreview();
-  });
+        function onDragStart(e, cardId) {
+          e.dataTransfer.setData("text/plain", cardId);
+          e.dataTransfer.effectAllowed = "move";
+        }
 
-  btnRemovePhoto.addEventListener("click", () => {
-    modalPhotoDataUrl = "";
-    inpPhoto.value = "";
-    syncPhotoPreview();
-  });
+        function onDrop(e, colKey) {
+          e.preventDefault();
+          const cardId = e.dataTransfer.getData("text/plain");
+          if (!cardId) return;
+          updateCard(cardId, { col: colKey });
+          setDragOverCol(null);
+        }
 
-  function readFileAsDataURL(file){
-    return new Promise((resolve, reject) => {
-      const r = new FileReader();
-      r.onload = () => resolve(String(r.result || ""));
-      r.onerror = () => reject(r.error);
-      r.readAsDataURL(file);
-    });
-  }
+        function allowDrop(e) {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "move";
+        }
 
-  btnAdd.addEventListener("click", () => openModal({ dept:"Inbound" }));
-  btnCloseModal.addEventListener("click", closeModal);
-  modalBack.addEventListener("click", (e) => {
-    if (e.target === modalBack) closeModal();
-  });
+        const cardsByCol = useMemo(() => {
+          const m = {};
+          for (const col of UNI_COLS) m[col.key] = [];
+          for (const c of data.cards) {
+            (m[c.col] || (m[c.col] = [])).push(c);
+          }
+          return m;
+        }, [data.cards]);
 
-  btnSave.addEventListener("click", () => {
-    const badges = [];
-    if (chkBHD.checked) badges.push("BHD");
-    if (chkCOHOST.checked) badges.push("COHOST");
-
-    const roles = [];
-    for (const r of roleCheckboxes) if (r.el.checked) roles.push(r.value);
-
-    const data = {
-      name: inpName.value,
-      login: inpLogin.value,
-      dept: selDept.value,
-      badges,
-      roles,
-      photoDataUrl: modalPhotoDataUrl
-    };
-
-    const id = editId.textContent;
-    if (id) updateCard(id, data);
-    else addCard(data);
-
-    closeModal();
-  });
-
-  btnDelete.addEventListener("click", () => {
-    const id = editId.textContent;
-    if (!id) return;
-    deleteCard(id);
-    closeModal();
-  });
-
-  // Login modal logic
-  function openLogin() {
-    loadLogin();
-    loginBack.style.display = "flex";
-    loginBack.setAttribute("aria-hidden", "false");
-    setTimeout(() => inpManager.focus(), 0);
-  }
-  function closeLogin() {
-    loginBack.style.display = "none";
-    loginBack.setAttribute("aria-hidden", "true");
-  }
-  btnLogin.addEventListener("click", openLogin);
-  btnCloseLogin.addEventListener("click", closeLogin);
-  loginBack.addEventListener("click", (e) => {
-    if (e.target === loginBack) closeLogin();
-  });
-  btnSaveLogin.addEventListener("click", saveLogin);
-
-  // Search
-  let t = null;
-  searchEl.addEventListener("input", () => {
-    clearTimeout(t);
-    t = setTimeout(render, 80);
-  });
-
-  // Clear board
-  btnClear.addEventListener("click", () => {
-    const ok = confirm("Clear all associates from this board on this device?");
-    if (!ok) return;
-    state.cards = [];
-    touch();
-  });
-
-  // Persist + Back-compat
-  function loadState(){
-    try{
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return { cards: [], updatedAt: Date.now() };
-      const parsed = JSON.parse(raw);
-      if (!parsed || !Array.isArray(parsed.cards)) return { cards: [], updatedAt: Date.now() };
-
-      parsed.cards = parsed.cards.map(c => {
-        // badges (older had `badge` string)
-        const badges = Array.isArray(c.badges) ? c.badges.slice() : [];
-        if (!badges.length && typeof c.badge === "string" && c.badge.trim()) badges.push(c.badge.trim());
-        const allowedBadges = new Set(["BHD","COHOST"]);
-        const cleanBadges = [...new Set(badges)].filter(x => allowedBadges.has(x));
-
-        // roles (older had `role` string)
-        let roles = Array.isArray(c.roles) ? c.roles.slice() : [];
-        if (!roles.length && typeof c.role === "string" && c.role.trim()) roles.push(c.role.trim());
-        const allowedRoles = new Set(ROLE_VALUES);
-        roles = [...new Set(roles)].filter(r => allowedRoles.has(r));
-
-        return {
-          id: c.id || crypto.randomUUID(),
-          name: c.name || "",
-          login: c.login || "",
-          dept: c.dept || "Inbound",
-          badges: cleanBadges,
-          roles,
-          photoDataUrl: c.photoDataUrl || ""
+        const fmtDue = (iso) => {
+          if (!iso) return "No due date";
+          const d = new Date(iso);
+          return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
         };
-      });
 
-      return { cards: parsed.cards, updatedAt: parsed.updatedAt || Date.now() };
-    }catch{
-      return { cards: [], updatedAt: Date.now() };
-    }
-  }
-  function saveState(s){
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
-  }
+        return (
+          <>
+            <div className="panel">
+              <h3>Add assignment</h3>
+              <div className="grid2">
+                <input value={course} onChange={(e) => setCourse(e.target.value)} placeholder="Class (e.g., BUS 240)" disabled={!canUse}/>
+                <input value={assignment} onChange={(e) => setAssignment(e.target.value)} placeholder="Assignment (e.g., Week 3 Discussion)" disabled={!canUse}/>
+              </div>
+              <div className="formRow">
+                <input type="date" value={due} onChange={(e) => setDue(e.target.value)} disabled={!canUse}/>
+                <button className="primary" onClick={addAssignment} disabled={!canUse}>Add</button>
+              </div>
+              <div className="mutedLine">
+                Tip: drag assignments across columns as you work. Edit class/title/due date directly on each card.
+              </div>
+            </div>
 
-  function loadTargets(){
-    try{
-      const raw = localStorage.getItem(TARGETS_KEY);
-      if (!raw) return { Inbound: 0, Outbound: 0, Demora: 0 };
-      const t = JSON.parse(raw);
-      return {
-        Inbound: Number(t.Inbound ?? 0),
-        Outbound: Number(t.Outbound ?? 0),
-        Demora: Number(t.Demora ?? 0),
-      };
-    }catch{
-      return { Inbound: 0, Outbound: 0, Demora: 0 };
-    }
-  }
-  function saveTargets(t){
-    localStorage.setItem(TARGETS_KEY, JSON.stringify(t));
-  }
+            <div className="board">
+              {UNI_COLS.map(col => (
+                <div
+                  key={col.key}
+                  className={"col " + (dragOverCol === col.key ? "dragOver" : "")}
+                  onDragOver={(e) => { allowDrop(e); setDragOverCol(col.key); }}
+                  onDragLeave={() => setDragOverCol(null)}
+                  onDrop={(e) => onDrop(e, col.key)}
+                >
+                  <div className="colHeader">
+                    <h2>{col.title}</h2>
+                    <span>{(cardsByCol[col.key] || []).length}</span>
+                  </div>
 
-  // Initial render
-  render();
+                  <div className="dropZone">
+                    {(cardsByCol[col.key] || []).length === 0 ? (
+                      <div className="hint">Drag cards here.</div>
+                    ) : null}
 
-})();
-</script>
-</body>
+                    {(cardsByCol[col.key] || []).map(card => (
+                      <div
+                        key={card.id}
+                        className="card"
+                        draggable
+                        onDragStart={(e) => onDragStart(e, card.id)}
+                        title="Drag to move"
+                      >
+                        <div className="cardTop">
+                          <div>
+                            <p className="name">{card.title}</p>
+                            <div className="row" style={{ marginTop: 8 }}>
+                              <span className="pill">{card.course}</span>
+                              <span className="pill">Due: {fmtDue(card.dueDate)}</span>
+                            </div>
+                            <div className="small" style={{ marginTop: 8 }}>
+                              Added by <strong>{card.createdBy}</strong>
+                            </div>
+                          </div>
+                          <div className="actions">
+                            <button className="iconBtn" onClick={() => removeCard(card.id)}>Delete</button>
+                          </div>
+                        </div>
+
+                        <div className="formRow" style={{ marginTop: 10 }}>
+                          <input
+                            value={card.course}
+                            onChange={(e) => updateCard(card.id, { course: e.target.value })}
+                            style={{ minWidth: 180 }}
+                          />
+                          <input
+                            value={card.title}
+                            onChange={(e) => updateCard(card.id, { title: e.target.value })}
+                            style={{ minWidth: 220 }}
+                          />
+                          <input
+                            type="date"
+                            value={card.dueDate ? new Date(card.dueDate).toISOString().slice(0,10) : ""}
+                            onChange={(e) => updateCard(card.id, { dueDate: e.target.value ? new Date(e.target.value).toISOString() : null })}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        );
+      }
+
+      ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+    </script>
+  </body>
 </html>
