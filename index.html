@@ -224,7 +224,9 @@
       }
 
       function App() {
-        const [loginName, setLoginName] = useState(() => localStorage.getItem("swb_login") || "migudavc");
+        // ✅ Removed search/login bar: keep a fixed loginName for localStorage keys + createdBy
+        const loginName = "migudavc";
+
         const [activeTab, setActiveTab] = useState("staffing");
         const [lastUpdated, setLastUpdated] = useState(() => localStorage.getItem("swb_lastUpdated") || nowStamp());
         const [toast, setToast] = useState("");
@@ -310,7 +312,7 @@
         }
 
         useEffect(() => {
-          localStorage.setItem("swb_login", loginName);
+          // keep these in sync for this fixed login
           const lk = localStorage.getItem(`swb_locked_${loginName || "anonymous"}`) === "1";
           const ps = !!localStorage.getItem(`swb_pin_${loginName || "anonymous"}`);
           setIsLocked(lk);
@@ -386,18 +388,12 @@
                 <div className="meta">
                   <span><strong>Today:</strong> {todayStr()}</span>
                   <span><strong>Last Updated:</strong> {lastUpdated}</span>
-                  <span><strong>Login Name:</strong> {loginName ? loginName : "Not set"}</span>
                   <span><strong>Status:</strong> {isLocked ? "Locked (view-only)" : "Unlocked"}</span>
                 </div>
               </div>
 
               <div className="controls">
-                <input
-                  value={loginName}
-                  onChange={(e) => setLoginName(e.target.value.trimStart())}
-                  placeholder=""
-                  style={{ minWidth: 240 }}
-                />
+                {/* ✅ Login/search bar removed */}
 
                 {isLocked ? (
                   <button className="lock active" onClick={openUnlock} title="Unlock requires PIN">
