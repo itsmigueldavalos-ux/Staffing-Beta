@@ -106,12 +106,28 @@
         border: 1px dashed rgba(255,255,255,.18);
         border-radius: 14px;
         padding: 10px 12px;
+        min-height: 26px;
       }
       .dragOver {
         outline: 2px solid rgba(255,255,255,.22);
         outline-offset: -2px;
         background: rgba(255,255,255,.04);
       }
+
+      .subsection {
+        border: 1px solid rgba(255,255,255,.10);
+        border-radius: 14px;
+        overflow: hidden;
+        background: rgba(255,255,255,.03);
+      }
+      .subHeader {
+        padding: 10px 12px;
+        border-bottom: 1px solid rgba(255,255,255,.10);
+        display:flex; align-items:center; justify-content: space-between;
+        font-size: 13px;
+      }
+      .subHeader b { font-size: 13px; }
+      .subBody { padding: 10px; display:flex; flex-direction: column; gap: 10px; min-height: 80px; }
 
       .card {
         border: 1px solid var(--border);
@@ -137,9 +153,6 @@
         background: rgba(29,185,84,.15);
         border-color: rgba(29,185,84,.35);
       }
-
-      .actions { display:flex; gap: 8px; align-items: center; }
-      .iconBtn { padding: 8px 10px; border-radius: 12px; font-size: 12px; }
 
       .toast {
         position: fixed;
@@ -198,11 +211,40 @@
         "ICQA",
       ];
 
+      // ✅ New column structure + sections (sub-columns)
       const STAFFING_COLS = [
-        { key: "planned", title: "Planned" },
-        { key: "onFloor", title: "On Floor" },
-        { key: "break", title: "Break / Support" },
-        { key: "off", title: "Off / Not Assigned" },
+        {
+          key: "pg",
+          title: "Process Guide",
+          sections: [
+            { key: "pg_stow", title: "Stow" },
+            { key: "pg_pick", title: "Pick" },
+          ],
+        },
+        {
+          key: "ps",
+          title: "Problem Solve",
+          sections: [
+            { key: "ps_qxy2", title: "QXY2" },
+            { key: "ps_xlx7", title: "XLX7" },
+            { key: "ps_iol", title: "IOL/ICQA" },
+          ],
+        },
+        {
+          key: "ls",
+          title: "LaborShare",
+          sections: [
+            { key: "ls_in", title: "Inbound" },
+            { key: "ls_out", title: "Outbound" },
+          ],
+        },
+        {
+          key: "na",
+          title: "Not Assigned",
+          sections: [
+            { key: "na_default", title: "Default" },
+          ],
+        },
       ];
 
       const UNI_COLS = [
@@ -224,7 +266,6 @@
       }
 
       function App() {
-        // Fixed login (no search bar)
         const loginName = "migudavc";
 
         const [activeTab, setActiveTab] = useState("staffing");
@@ -260,7 +301,8 @@
             shiftCoHost: "DB3T0700",
             shiftPattern: "Back Half Days",
             role: "Problem Solver",
-            col: "planned",
+            // ✅ Default location is "Not Assigned"
+            col: "na_default",
             createdBy: "migudavc",
             createdAt: new Date().toISOString(),
           };
@@ -273,12 +315,33 @@
           };
         }
 
+        // migrate legacy col values to the new "section keys"
+        function migrateCardCol(oldCol) {
+          const known = new Set(STAFFING_COLS.flatMap(c => c.sections.map(s => s.key)));
+          if (known.has(oldCol)) return oldCol;
+
+          // old board keys mapping:
+          if (oldCol === "planned") return "pg_stow";
+          if (oldCol === "onFloor") return "ps_qxy2";
+          if (oldCol === "break") return "ls_in";
+          if (oldCol === "off") return "na_default";
+
+          // fallback
+          return "na_default";
+        }
+
         useEffect(() => {
           const raw = localStorage.getItem(storageKey);
           const parsed = raw ? safeParse(raw, defaultState()) : defaultState();
 
           parsed.staffing = parsed.staffing || { cards: [] };
           parsed.staffing.cards = Array.isArray(parsed.staffing.cards) ? parsed.staffing.cards : [];
+
+          // migrate existing cards to new col structure
+          parsed.staffing.cards = parsed.staffing.cards.map((c) => ({
+            ...c,
+            col: migrateCardCol(c.col),
+          }));
 
           const hasMiguel = parsed.staffing.cards.some(
             (c) => c && c.login === "migudavc" && (c.personName || "").toLowerCase().includes("miguel")
@@ -499,7 +562,7 @@
       }
 
       function StaffingBoard({ data, onChange, showToast, isLocked, lockedLogin }) {
-        const [dragOverCol, setDragOverCol] = useState(null);
+        const [dragOverId, setDragOverId] = useState(null);
 
         function blocked() { showToast("Locked (view-only). Unlock with PIN to edit."); }
 
@@ -523,18 +586,18 @@
           e.dataTransfer.dropEffect = "move";
         }
 
-        function onDrop(e, colKey) {
+        function onDrop(e, sectionKey) {
           if (isLocked) return blocked();
           e.preventDefault();
           const cardId = e.dataTransfer.getData("text/plain");
           if (!cardId) return;
-          updateCard(cardId, { col: colKey });
-          setDragOverCol(null);
+          updateCard(cardId, { col: sectionKey });
+          setDragOverId(null);
         }
 
-        const cardsByCol = useMemo(() => {
+        const cardsBySection = useMemo(() => {
           const m = {};
-          for (const col of STAFFING_COLS) m[col.key] = [];
+          for (const c of STAFFING_COLS) for (const s of c.sections) m[s.key] = [];
           for (const c of data.cards || []) {
             (m[c.col] || (m[c.col] = [])).push(c);
           }
@@ -544,69 +607,77 @@
         return (
           <div className="board">
             {STAFFING_COLS.map((col) => (
-              <div
-                key={col.key}
-                className={"col " + (!isLocked && dragOverCol === col.key ? "dragOver" : "")}
-                onDragOver={(e) => { allowDrop(e); if (!isLocked) setDragOverCol(col.key); }}
-                onDragLeave={() => setDragOverCol(null)}
-                onDrop={(e) => onDrop(e, col.key)}
-              >
+              <div key={col.key} className="col">
                 <div className="colHeader">
                   <h2>{col.title}</h2>
-                  <span>{(cardsByCol[col.key] || []).length}</span>
+                  <span>
+                    {col.sections.reduce((sum, s) => sum + (cardsBySection[s.key]?.length || 0), 0)}
+                  </span>
                 </div>
 
                 <div className="dropZone">
-                  {(cardsByCol[col.key] || []).length === 0 ? (
-                    <div className="hint"></div>
-                  ) : null}
+                  {col.sections.map((sec) => (
+                    <div
+                      key={sec.key}
+                      className={"subsection " + (!isLocked && dragOverId === sec.key ? "dragOver" : "")}
+                      onDragOver={(e) => { allowDrop(e); if (!isLocked) setDragOverId(sec.key); }}
+                      onDragLeave={() => setDragOverId(null)}
+                      onDrop={(e) => onDrop(e, sec.key)}
+                    >
+                      <div className="subHeader">
+                        <b>{sec.title}</b>
+                        <span style={{ color: "rgba(255,255,255,.65)", fontSize: 12 }}>
+                          {(cardsBySection[sec.key] || []).length}
+                        </span>
+                      </div>
 
-                  {(cardsByCol[col.key] || []).map((card) => {
-                    const isMiguel = card.login === lockedLogin; // current badge
-                    return (
-                      <div
-                        key={card.id}
-                        className="card"
-                        draggable={!isLocked}
-                        onDragStart={(e) => onDragStart(e, card.id)}
-                        title={isLocked ? "Locked (view-only)" : "Drag to move"}
-                      >
-                        <div className="cardTop">
-                          <div>
-                            <p className="name">{card.personName} ({card.login})</p>
-                            <div className="subline">{card.shiftCoHost} - {card.shiftPattern}</div>
+                      <div className="subBody">
+                        {(cardsBySection[sec.key] || []).length === 0 ? <div className="hint"></div> : null}
 
-                            <div className="row">
-                              <span className="badge">
-                                Role:&nbsp;
-                                <select
-                                  value={card.role}
-                                  disabled={isLocked}
-                                  onChange={(e) => updateCard(card.id, { role: e.target.value })}
-                                  style={{
-                                    padding: "6px 10px",
-                                    borderRadius: "999px",
-                                    border: "1px solid rgba(255,255,255,.18)",
-                                    background: "rgba(255,255,255,.08)",
-                                    color: "rgba(255,255,255,.92)",
-                                  }}
-                                >
-                                  {ROLES.map((r) => (
-                                    <option key={r} value={r}>{r}</option>
-                                  ))}
-                                </select>
-                              </span>
+                        {(cardsBySection[sec.key] || []).map((card) => (
+                          <div
+                            key={card.id}
+                            className="card"
+                            draggable={!isLocked}
+                            onDragStart={(e) => onDragStart(e, card.id)}
+                            title={isLocked ? "Locked (view-only)" : "Drag to move"}
+                          >
+                            <div className="cardTop">
+                              <div>
+                                <p className="name">{card.personName} ({card.login})</p>
+                                <div className="subline">{card.shiftCoHost} - {card.shiftPattern}</div>
+
+                                <div className="row">
+                                  <span className="badge">
+                                    Role:&nbsp;
+                                    <select
+                                      value={card.role}
+                                      disabled={isLocked}
+                                      onChange={(e) => updateCard(card.id, { role: e.target.value })}
+                                      style={{
+                                        padding: "6px 10px",
+                                        borderRadius: "999px",
+                                        border: "1px solid rgba(255,255,255,.18)",
+                                        background: "rgba(255,255,255,.08)",
+                                        color: "rgba(255,255,255,.92)",
+                                      }}
+                                    >
+                                      {ROLES.map((r) => (
+                                        <option key={r} value={r}>{r}</option>
+                                      ))}
+                                    </select>
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* No delete button on staffing badges */}
+                              <div style={{ width: 1 }}></div>
                             </div>
                           </div>
-
-                          <div className="actions">
-                            {/* ✅ Delete button removed for the current badge */}
-                            {!isMiguel ? null : null}
-                          </div>
-                        </div>
+                        ))}
                       </div>
-                    );
-                  })}
+                    </div>
+                  ))}
                 </div>
               </div>
             ))}
@@ -737,9 +808,7 @@
                             <div className="small">Login: {card.createdBy}</div>
                           </div>
                           <div className="actions">
-                            <button className="iconBtn" onClick={() => removeCard(card.id)} disabled={isLocked}>
-                              Delete
-                            </button>
+                            <button onClick={() => removeCard(card.id)} disabled={isLocked}>Delete</button>
                           </div>
                         </div>
 
