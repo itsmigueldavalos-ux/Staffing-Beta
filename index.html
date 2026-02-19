@@ -224,7 +224,7 @@
       }
 
       function App() {
-        // ✅ Removed search/login bar: keep a fixed loginName for localStorage keys + createdBy
+        // Fixed login (no search bar)
         const loginName = "migudavc";
 
         const [activeTab, setActiveTab] = useState("staffing");
@@ -312,7 +312,6 @@
         }
 
         useEffect(() => {
-          // keep these in sync for this fixed login
           const lk = localStorage.getItem(`swb_locked_${loginName || "anonymous"}`) === "1";
           const ps = !!localStorage.getItem(`swb_pin_${loginName || "anonymous"}`);
           setIsLocked(lk);
@@ -393,8 +392,6 @@
               </div>
 
               <div className="controls">
-                {/* ✅ Login/search bar removed */}
-
                 {isLocked ? (
                   <button className="lock active" onClick={openUnlock} title="Unlock requires PIN">
                     Unlock (PIN)
@@ -433,6 +430,7 @@
                 }}
                 showToast={showToast}
                 isLocked={isLocked}
+                lockedLogin={loginName}
               />
             ) : (
               <UniversityBoard
@@ -500,7 +498,7 @@
         );
       }
 
-      function StaffingBoard({ data, onChange, showToast, isLocked }) {
+      function StaffingBoard({ data, onChange, showToast, isLocked, lockedLogin }) {
         const [dragOverCol, setDragOverCol] = useState(null);
 
         function blocked() { showToast("Locked (view-only). Unlock with PIN to edit."); }
@@ -510,14 +508,6 @@
           onChange({
             ...data,
             cards: (data.cards || []).map((c) => (c.id === id ? { ...c, ...patch } : c)),
-          });
-        }
-
-        function removeCard(id) {
-          if (isLocked) return blocked();
-          onChange({
-            ...data,
-            cards: (data.cards || []).filter((c) => c.id !== id),
           });
         }
 
@@ -571,50 +561,52 @@
                     <div className="hint"></div>
                   ) : null}
 
-                  {(cardsByCol[col.key] || []).map((card) => (
-                    <div
-                      key={card.id}
-                      className="card"
-                      draggable={!isLocked}
-                      onDragStart={(e) => onDragStart(e, card.id)}
-                      title={isLocked ? "Locked (view-only)" : "Drag to move"}
-                    >
-                      <div className="cardTop">
-                        <div>
-                          <p className="name">{card.personName} ({card.login})</p>
-                          <div className="subline">{card.shiftCoHost} - {card.shiftPattern}</div>
+                  {(cardsByCol[col.key] || []).map((card) => {
+                    const isMiguel = card.login === lockedLogin; // current badge
+                    return (
+                      <div
+                        key={card.id}
+                        className="card"
+                        draggable={!isLocked}
+                        onDragStart={(e) => onDragStart(e, card.id)}
+                        title={isLocked ? "Locked (view-only)" : "Drag to move"}
+                      >
+                        <div className="cardTop">
+                          <div>
+                            <p className="name">{card.personName} ({card.login})</p>
+                            <div className="subline">{card.shiftCoHost} - {card.shiftPattern}</div>
 
-                          <div className="row">
-                            <span className="badge">
-                              Role:&nbsp;
-                              <select
-                                value={card.role}
-                                disabled={isLocked}
-                                onChange={(e) => updateCard(card.id, { role: e.target.value })}
-                                style={{
-                                  padding: "6px 10px",
-                                  borderRadius: "999px",
-                                  border: "1px solid rgba(255,255,255,.18)",
-                                  background: "rgba(255,255,255,.08)",
-                                  color: "rgba(255,255,255,.92)",
-                                }}
-                              >
-                                {ROLES.map((r) => (
-                                  <option key={r} value={r}>{r}</option>
-                                ))}
-                              </select>
-                            </span>
+                            <div className="row">
+                              <span className="badge">
+                                Role:&nbsp;
+                                <select
+                                  value={card.role}
+                                  disabled={isLocked}
+                                  onChange={(e) => updateCard(card.id, { role: e.target.value })}
+                                  style={{
+                                    padding: "6px 10px",
+                                    borderRadius: "999px",
+                                    border: "1px solid rgba(255,255,255,.18)",
+                                    background: "rgba(255,255,255,.08)",
+                                    color: "rgba(255,255,255,.92)",
+                                  }}
+                                >
+                                  {ROLES.map((r) => (
+                                    <option key={r} value={r}>{r}</option>
+                                  ))}
+                                </select>
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="actions">
+                            {/* ✅ Delete button removed for the current badge */}
+                            {!isMiguel ? null : null}
                           </div>
                         </div>
-
-                        <div className="actions">
-                          <button className="iconBtn" onClick={() => removeCard(card.id)} disabled={isLocked}>
-                            Delete
-                          </button>
-                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             ))}
