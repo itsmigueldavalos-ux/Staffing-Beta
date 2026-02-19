@@ -76,7 +76,7 @@
       .board {
         margin-top: 14px;
         display: grid;
-        grid-template-columns: repeat(5, 1fr); /* ✅ now 5 columns */
+        grid-template-columns: repeat(5, 1fr);
         gap: 12px;
       }
       @media (max-width: 1180px) { .board { grid-template-columns: repeat(3, 1fr); } }
@@ -185,57 +185,30 @@
     <script type="text/babel">
       const { useEffect, useMemo, useState } = React;
 
-      // ✅ Column structure + sections (sub-columns)
+      // Staffing columns
       const STAFFING_COLS = [
-        {
-          key: "pg",
-          title: "Process Guide",
-          sections: [
-            { key: "pg_stow", title: "Stow" },
-            { key: "pg_pick", title: "Pick" },
-          ],
-        },
-        {
-          key: "ipf",
-          title: "In Path Function",
-          sections: [
-            { key: "ipf_down", title: "Downstacker" },
-            { key: "ipf_stow", title: "Stower" },
-            { key: "ipf_pick", title: "Picker" },
-            { key: "ipf_trans", title: "Transporter (Stow or Pick)" },
-          ],
-        },
-        {
-          key: "ps",
-          title: "Problem Solve",
-          sections: [
-            { key: "ps_qxy2", title: "QXY2" },
-            { key: "ps_xlx7", title: "XLX7" },
-            { key: "ps_iol", title: "IOL/ICQA" },
-          ],
-        },
-        {
-          key: "ls",
-          title: "LaborShare",
-          sections: [
-            { key: "ls_in", title: "Inbound" },
-            { key: "ls_out", title: "Outbound" },
-          ],
-        },
-        {
-          key: "na",
-          title: "Not Assigned",
-          sections: [
-            { key: "na_default", title: "Default" },
-          ],
-        },
+        { key: "pg", title: "Process Guide", sections: [{ key: "pg_stow", title: "Stow" }, { key: "pg_pick", title: "Pick" }] },
+        { key: "ipf", title: "In Path Function", sections: [
+          { key: "ipf_down", title: "Downstacker" },
+          { key: "ipf_stow", title: "Stower" },
+          { key: "ipf_pick", title: "Picker" },
+          { key: "ipf_trans", title: "Transporter (Stow or Pick)" },
+        ]},
+        { key: "ps", title: "Problem Solve", sections: [{ key: "ps_qxy2", title: "QXY2" }, { key: "ps_xlx7", title: "XLX7" }, { key: "ps_iol", title: "IOL/ICQA" }] },
+        { key: "ls", title: "LaborShare", sections: [{ key: "ls_in", title: "Inbound" }, { key: "ls_out", title: "Outbound" }] },
+        { key: "na", title: "Not Assigned", sections: [{ key: "na_default", title: "Default" }] },
       ];
 
-      const UNI_COLS = [
-        { key: "todo", title: "To Do" },
-        { key: "doing", title: "In Progress" },
-        { key: "done", title: "Done" },
-        { key: "blocked", title: "Blocked" },
+      // ✅ University board renamed + simplified to ONE course column with sections
+      const SNHU_COLS = [
+        {
+          key: "bus206",
+          title: "BUS 206 (Business Law)",
+          sections: [
+            { key: "bus206_todo", title: "To Do" },
+            { key: "bus206_ip", title: "In Progress" },
+          ],
+        },
       ];
 
       const todayStr = () => {
@@ -284,8 +257,7 @@
             login: "migudavc",
             shiftCoHost: "DB3T0700",
             shiftPattern: "Back Half Days",
-            // ✅ role removed from the badge data
-            col: "na_default", // ✅ default location is Not Assigned
+            col: "na_default",
             createdBy: "migudavc",
             createdAt: new Date().toISOString(),
           };
@@ -294,25 +266,33 @@
         function defaultState() {
           return {
             staffing: { cards: [miguelCard()] },
-            university: { cards: [] },
+            snhu: { cards: [] },
           };
         }
 
-        // migrate legacy col values to the new "section keys"
-        function migrateCardCol(oldCol) {
-          const known = new Set(STAFFING_COLS.flatMap(c => c.sections.map(s => s.key)));
-          if (known.has(oldCol)) return oldCol;
-
-          // old board keys mapping (from earlier versions)
-          if (oldCol === "planned") return "pg_stow";
-          if (oldCol === "onFloor") return "ps_qxy2";
-          if (oldCol === "break") return "ls_in";
-          if (oldCol === "off") return "na_default";
-
-          return "na_default";
+        function sectionKeys(cols) {
+          return cols.flatMap(c => (c.sections || []).map(s => s.key));
         }
 
-        // remove old "role" field from existing saved cards
+        function migrateCardCol(oldCol, cols, fallbackKey) {
+          const known = new Set(sectionKeys(cols));
+          if (known.has(oldCol)) return oldCol;
+
+          // old staffing mapping
+          if (cols === STAFFING_COLS) {
+            if (oldCol === "planned") return "pg_stow";
+            if (oldCol === "onFloor") return "ps_qxy2";
+            if (oldCol === "break") return "ls_in";
+            if (oldCol === "off") return "na_default";
+            return "na_default";
+          }
+
+          // old university mapping
+          // todo/doing/done/blocked -> put into BUS206 To Do/ In Progress
+          if (oldCol === "doing") return "bus206_ip";
+          return "bus206_todo";
+        }
+
         function stripRole(card) {
           if (!card) return card;
           const { role, ...rest } = card;
@@ -325,12 +305,24 @@
 
           parsed.staffing = parsed.staffing || { cards: [] };
           parsed.staffing.cards = Array.isArray(parsed.staffing.cards) ? parsed.staffing.cards : [];
-
-          // migrate existing cards + remove role
           parsed.staffing.cards = parsed.staffing.cards.map((c) => {
             const cleaned = stripRole(c);
-            return { ...cleaned, col: migrateCardCol(cleaned.col) };
+            return { ...cleaned, col: migrateCardCol(cleaned.col, STAFFING_COLS, "na_default") };
           });
+
+          // ✅ migrate old "university" into new "snhu"
+          const oldUni = parsed.university?.cards ? parsed.university.cards : [];
+          parsed.snhu = parsed.snhu || { cards: [] };
+          parsed.snhu.cards = Array.isArray(parsed.snhu.cards) ? parsed.snhu.cards : [];
+
+          if (Array.isArray(oldUni) && oldUni.length) {
+            const migrated = oldUni.map((c) => ({
+              ...c,
+              col: migrateCardCol(c.col, SNHU_COLS, "bus206_todo"),
+            }));
+            parsed.snhu.cards = [...migrated, ...parsed.snhu.cards];
+            delete parsed.university;
+          }
 
           const hasMiguel = parsed.staffing.cards.some(
             (c) => c && c.login === "migudavc" && (c.personName || "").toLowerCase().includes("miguel")
@@ -468,8 +460,8 @@
               <div className={"tab " + (activeTab === "staffing" ? "active" : "")} onClick={() => setActiveTab("staffing")}>
                 Staffing Board
               </div>
-              <div className={"tab " + (activeTab === "university" ? "active" : "")} onClick={() => setActiveTab("university")}>
-                University Assignments
+              <div className={"tab " + (activeTab === "snhu" ? "active" : "")} onClick={() => setActiveTab("snhu")}>
+                Southern New Hampshire University (SNHU)
               </div>
             </div>
 
@@ -484,13 +476,12 @@
                 isLocked={isLocked}
               />
             ) : (
-              <UniversityBoard
-                data={state.university}
-                onChange={(nextUni) => {
+              <SNHUBoard
+                data={state.snhu}
+                onChange={(nextSNHU) => {
                   if (isLocked) { showToast("Locked (view-only). Unlock with PIN to edit."); return; }
-                  touchUpdate({ ...state, university: nextUni });
+                  touchUpdate({ ...state, snhu: nextSNHU });
                 }}
-                loginName={loginName}
                 isLocked={isLocked}
                 showToast={showToast}
               />
@@ -598,9 +589,7 @@
               <div key={col.key} className="col">
                 <div className="colHeader">
                   <h2>{col.title}</h2>
-                  <span>
-                    {col.sections.reduce((sum, s) => sum + (cardsBySection[s.key]?.length || 0), 0)}
-                  </span>
+                  <span>{col.sections.reduce((sum, s) => sum + (cardsBySection[s.key]?.length || 0), 0)}</span>
                 </div>
 
                 <div className="dropZone">
@@ -634,9 +623,8 @@
                               <div>
                                 <p className="name">{card.personName} ({card.login})</p>
                                 <div className="subline">{card.shiftCoHost} - {card.shiftPattern}</div>
-                                {/* ✅ role UI removed */}
                               </div>
-                              <div style={{ width: 1 }}></div>
+                              <div style={{ width: 1 }} />
                             </div>
                           </div>
                         ))}
@@ -650,27 +638,27 @@
         );
       }
 
-      function UniversityBoard({ data, onChange, loginName, isLocked, showToast }) {
-        const [course, setCourse] = useState("");
+      // ✅ SNHU board:
+      // - Removed Done + Blocked
+      // - Removed "Add Class" (no course input anymore)
+      // - BUS 206 column with 2 sections: To Do / In Progress
+      function SNHUBoard({ data, onChange, isLocked, showToast }) {
         const [assignment, setAssignment] = useState("");
         const [due, setDue] = useState("");
-        const [dragOverCol, setDragOverCol] = useState(null);
+        const [dragOverId, setDragOverId] = useState(null);
 
         function blocked() { showToast("Locked (view-only). Unlock with PIN to edit."); }
 
         function addAssignment() {
           if (isLocked) return blocked();
-          const c = course.trim();
           const a = assignment.trim();
-          if (!c || !a) return;
+          if (!a) return;
 
           const card = {
             id: uid(),
-            course: c,
             title: a,
             dueDate: due ? new Date(due).toISOString() : null,
-            col: "todo",
-            createdBy: loginName || "anonymous",
+            col: "bus206_todo",
             createdAt: new Date().toISOString(),
           };
           onChange({ ...data, cards: [card, ...(data.cards || [])] });
@@ -703,21 +691,18 @@
           e.dataTransfer.dropEffect = "move";
         }
 
-        function onDrop(e, colKey) {
+        function onDrop(e, sectionKey) {
           if (isLocked) return blocked();
           e.preventDefault();
           const cardId = e.dataTransfer.getData("text/plain");
           if (!cardId) return;
-          updateCard(cardId, { col: colKey });
-          setDragOverCol(null);
+          updateCard(cardId, { col: sectionKey });
+          setDragOverId(null);
         }
 
-        const cardsByCol = useMemo(() => {
-          const m = {};
-          for (const col of UNI_COLS) m[col.key] = [];
-          for (const c of data.cards || []) {
-            (m[c.col] || (m[c.col] = [])).push(c);
-          }
+        const cardsBySection = useMemo(() => {
+          const m = { bus206_todo: [], bus206_ip: [] };
+          for (const c of data.cards || []) (m[c.col] || (m[c.col] = [])).push(c);
           return m;
         }, [data.cards]);
 
@@ -732,59 +717,71 @@
             <div className="modal" style={{ marginTop: 14, maxWidth: "none" }}>
               <h3>Add assignment</h3>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                <input value={course} onChange={(e) => setCourse(e.target.value)} placeholder="Class (e.g., BUS 240)" disabled={isLocked}/>
                 <input value={assignment} onChange={(e) => setAssignment(e.target.value)} placeholder="Assignment (e.g., Week 3 Discussion)" disabled={isLocked}/>
+                <input type="date" value={due} onChange={(e) => setDue(e.target.value)} disabled={isLocked}/>
               </div>
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 }}>
-                <input type="date" value={due} onChange={(e) => setDue(e.target.value)} disabled={isLocked}/>
                 <button className="primary" onClick={addAssignment} disabled={isLocked}>Add</button>
               </div>
             </div>
 
-            <div className="board" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
-              {UNI_COLS.map((col) => (
-                <div
-                  key={col.key}
-                  className={"col " + (!isLocked && dragOverCol === col.key ? "dragOver" : "")}
-                  onDragOver={(e) => { allowDrop(e); if (!isLocked) setDragOverCol(col.key); }}
-                  onDragLeave={() => setDragOverCol(null)}
-                  onDrop={(e) => onDrop(e, col.key)}
-                >
+            {/* one course column with sections */}
+            <div className="board" style={{ gridTemplateColumns: "1fr" }}>
+              {SNHU_COLS.map((col) => (
+                <div key={col.key} className="col">
                   <div className="colHeader">
                     <h2>{col.title}</h2>
-                    <span>{(cardsByCol[col.key] || []).length}</span>
+                    <span>{col.sections.reduce((sum, s) => sum + (cardsBySection[s.key]?.length || 0), 0)}</span>
                   </div>
 
                   <div className="dropZone">
-                    {(cardsByCol[col.key] || []).length === 0 ? <div className="hint"></div> : null}
-
-                    {(cardsByCol[col.key] || []).map((card) => (
+                    {col.sections.map((sec) => (
                       <div
-                        key={card.id}
-                        className="card"
-                        draggable={!isLocked}
-                        onDragStart={(e) => onDragStart(e, card.id)}
-                        title={isLocked ? "Locked (view-only)" : "Drag to move"}
+                        key={sec.key}
+                        className={"subsection " + (!isLocked && dragOverId === sec.key ? "dragOver" : "")}
+                        onDragOver={(e) => { allowDrop(e); if (!isLocked) setDragOverId(sec.key); }}
+                        onDragLeave={() => setDragOverId(null)}
+                        onDrop={(e) => onDrop(e, sec.key)}
                       >
-                        <div className="cardTop">
-                          <div>
-                            <p className="name">{card.title}</p>
-                            <div className="subline">{card.course} • Due: {fmtDue(card.dueDate)}</div>
-                          </div>
-                          <div>
-                            <button onClick={() => removeCard(card.id)} disabled={isLocked}>Delete</button>
-                          </div>
+                        <div className="subHeader">
+                          <b>{sec.title}</b>
+                          <span style={{ color: "rgba(255,255,255,.65)", fontSize: 12 }}>
+                            {(cardsBySection[sec.key] || []).length}
+                          </span>
                         </div>
 
-                        <div style={{ display:"flex", gap:10, flexWrap:"wrap", marginTop: 10 }}>
-                          <input value={card.course} onChange={(e) => updateCard(card.id, { course: e.target.value })} style={{ minWidth: 180 }} disabled={isLocked}/>
-                          <input value={card.title} onChange={(e) => updateCard(card.id, { title: e.target.value })} style={{ minWidth: 220 }} disabled={isLocked}/>
-                          <input
-                            type="date"
-                            value={card.dueDate ? new Date(card.dueDate).toISOString().slice(0,10) : ""}
-                            onChange={(e) => updateCard(card.id, { dueDate: e.target.value ? new Date(e.target.value).toISOString() : null })}
-                            disabled={isLocked}
-                          />
+                        <div className="subBody">
+                          {(cardsBySection[sec.key] || []).length === 0 ? <div className="hint"></div> : null}
+
+                          {(cardsBySection[sec.key] || []).map((card) => (
+                            <div
+                              key={card.id}
+                              className="card"
+                              draggable={!isLocked}
+                              onDragStart={(e) => onDragStart(e, card.id)}
+                              title={isLocked ? "Locked (view-only)" : "Drag to move"}
+                            >
+                              <div className="cardTop">
+                                <div>
+                                  <p className="name">{card.title}</p>
+                                  <div className="subline">Due: {fmtDue(card.dueDate)}</div>
+                                </div>
+                                <div>
+                                  <button onClick={() => removeCard(card.id)} disabled={isLocked}>Delete</button>
+                                </div>
+                              </div>
+
+                              <div style={{ display:"flex", gap:10, flexWrap:"wrap", marginTop: 10 }}>
+                                <input value={card.title} onChange={(e) => updateCard(card.id, { title: e.target.value })} style={{ minWidth: 260 }} disabled={isLocked}/>
+                                <input
+                                  type="date"
+                                  value={card.dueDate ? new Date(card.dueDate).toISOString().slice(0,10) : ""}
+                                  onChange={(e) => updateCard(card.id, { dueDate: e.target.value ? new Date(e.target.value).toISOString() : null })}
+                                  disabled={isLocked}
+                                />
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
                     ))}
