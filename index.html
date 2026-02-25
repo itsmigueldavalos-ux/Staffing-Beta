@@ -176,6 +176,10 @@
       .modal h3 { margin: 0 0 10px 0; font-size: 15px; }
       .modalActions { display:flex; gap: 10px; justify-content: flex-end; margin-top: 12px; }
       .modalNote { font-size: 12px; color: rgba(255,255,255,.65); margin-top: 8px; line-height: 1.35; }
+
+      /* SNHU badge text style (no circle, just clean lines) */
+      .courseTitle { font-weight: 800; font-size: 14px; margin: 0; }
+      .termLine { font-size: 13px; color: rgba(255,255,255,.82); margin-top: 6px; }
     </style>
   </head>
 
@@ -198,7 +202,9 @@
         { key: "na",  title: "Not Assigned", sections: [{ key: "na_default", title: "Default" }] },
       ];
 
-      // ✅ Updated SNHU board: 3 columns, each has Pending + In Progress sections
+      // ✅ Updated SNHU board:
+      // - Current Term / Upcoming Term each keep Pending + In Progress
+      // - Not Assigned column has NO sections now (just a single drop area)
       const SNHU_COLS = [
         {
           key: "cur",
@@ -219,10 +225,8 @@
         {
           key: "na",
           title: "Not Assigned",
-          sections: [
-            { key: "snhu_na_pending", title: "Pending" },
-            { key: "snhu_na_progress", title: "In Progress" },
-          ],
+          sections: null, // ✅ no sections
+          dropKey: "snhu_na", // single bucket for this column
         },
       ];
 
@@ -273,10 +277,48 @@
           };
         }
 
+        // ✅ Pre-made SNHU course badges (no circle UI; just text lines)
+        function snhuSeedCards() {
+          return [
+            {
+              id: "snhu-" + uid(),
+              title: "ENG 190: Research and Persuasion",
+              term: "C-2 Term - March thru April 2026",
+              col: "cur_pending",
+              createdBy: loginName,
+              createdAt: new Date().toISOString(),
+            },
+            {
+              id: "snhu-" + uid(),
+              title: "IDS 105: Awareness and Online Learning",
+              term: "C-2 Term - March thru April 2026",
+              col: "cur_pending",
+              createdBy: loginName,
+              createdAt: new Date().toISOString(),
+            },
+            {
+              id: "snhu-" + uid(),
+              title: "ECO 202: Macroeconomics",
+              term: "C-3 Term - May thru June 2026",
+              col: "up_pending",
+              createdBy: loginName,
+              createdAt: new Date().toISOString(),
+            },
+            {
+              id: "snhu-" + uid(),
+              title: "PHL 260: Ethical Decision-Making & Problem-Solving",
+              term: "C-3 Term - May thru June 2026",
+              col: "up_pending",
+              createdBy: loginName,
+              createdAt: new Date().toISOString(),
+            },
+          ];
+        }
+
         function defaultState() {
           return {
             staffing: { cards: [miguelCard()] },
-            university: { cards: [] },
+            university: { cards: snhuSeedCards() }, // ✅ seed SNHU badges
           };
         }
 
@@ -291,15 +333,21 @@
         }
 
         function migrateSnhuCol(oldCol) {
-          const known = new Set(SNHU_COLS.flatMap(c => c.sections.map(s => s.key)));
-          if (known.has(oldCol)) return oldCol;
+          // valid buckets are: cur_pending, cur_progress, up_pending, up_progress, snhu_na
+          const valid = new Set(["cur_pending","cur_progress","up_pending","up_progress","snhu_na"]);
+          if (valid.has(oldCol)) return oldCol;
 
-          // previous versions: bus206_todo/bus206_doing
+          // previous versions:
+          if (oldCol === "up_progress") return "up_progress";
+          if (oldCol === "up_pending") return "up_pending";
+          if (oldCol === "cur_progress") return "cur_progress";
+          if (oldCol === "cur_pending") return "cur_pending";
+
           if (oldCol === "bus206_doing") return "cur_progress";
           if (oldCol === "bus206_todo") return "cur_pending";
 
-          // older versions: todo/doing/done/blocked
           if (oldCol === "doing") return "cur_progress";
+          // done/blocked/todo -> current pending
           return "cur_pending";
         }
 
@@ -318,7 +366,25 @@
 
           parsed.university = parsed.university || { cards: [] };
           parsed.university.cards = Array.isArray(parsed.university.cards) ? parsed.university.cards : [];
-          parsed.university.cards = parsed.university.cards.map((c) => ({ ...c, col: migrateSnhuCol(c.col) }));
+
+          parsed.university.cards = parsed.university.cards.map((c) => ({
+            ...c,
+            col: migrateSnhuCol(c.col),
+          }));
+
+          // ensure the 4 SNHU badges exist at least once
+          const titlesNeeded = new Set([
+            "ENG 190: Research and Persuasion",
+            "IDS 105: Awareness and Online Learning",
+            "ECO 202: Macroeconomics",
+            "PHL 260: Ethical Decision-Making & Problem-Solving",
+          ]);
+          const existingTitles = new Set(parsed.university.cards.map(c => c && c.title).filter(Boolean));
+          const missing = [...titlesNeeded].filter(t => !existingTitles.has(t));
+          if (missing.length) {
+            const seeds = snhuSeedCards().filter(s => missing.includes(s.title));
+            parsed.university.cards = [...seeds, ...parsed.university.cards];
+          }
 
           setState(parsed);
           // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -443,10 +509,7 @@
 
         function updateCard(id, patch) {
           if (isLocked) return blocked();
-          onChange({
-            ...data,
-            cards: (data.cards || []).map((c) => (c.id === id ? { ...c, ...patch } : c)),
-          });
+          onChange({ ...data, cards: (data.cards || []).map((c) => (c.id === id ? { ...c, ...patch } : c)) });
         }
 
         function onDragStart(e, cardId) {
@@ -533,29 +596,8 @@
       }
 
       function SnhuBoard({ data, onChange, loginName, isLocked, showToast }) {
-        const [assignment, setAssignment] = useState("");
-        const [due, setDue] = useState("");
         const [dragOverId, setDragOverId] = useState(null);
-
         function blocked() { showToast("Locked (view-only). Unlock to edit."); }
-
-        function addAssignment() {
-          if (isLocked) return blocked();
-          const a = assignment.trim();
-          if (!a) return;
-
-          const card = {
-            id: uid(),
-            title: a,
-            dueDate: due ? new Date(due).toISOString() : null,
-            col: "cur_pending", // default to Current Term > Pending
-            createdBy: loginName || "anonymous",
-            createdAt: new Date().toISOString(),
-          };
-          onChange({ ...data, cards: [card, ...(data.cards || [])] });
-          setAssignment("");
-          setDue("");
-        }
 
         function removeCard(id) {
           if (isLocked) return blocked();
@@ -579,54 +621,44 @@
           e.dataTransfer.dropEffect = "move";
         }
 
-        function onDrop(e, sectionKey) {
+        function onDrop(e, bucketKey) {
           if (isLocked) return blocked();
           e.preventDefault();
           const cardId = e.dataTransfer.getData("text/plain");
           if (!cardId) return;
-          updateCard(cardId, { col: sectionKey });
+          updateCard(cardId, { col: bucketKey });
           setDragOverId(null);
         }
 
-        const cardsBySection = useMemo(() => {
-          const m = {};
-          for (const c of SNHU_COLS) for (const s of c.sections) m[s.key] = [];
+        const buckets = useMemo(() => {
+          const m = {
+            cur_pending: [],
+            cur_progress: [],
+            up_pending: [],
+            up_progress: [],
+            snhu_na: [],
+          };
           for (const c of data.cards || []) (m[c.col] || (m[c.col] = [])).push(c);
           return m;
         }, [data.cards]);
 
-        const fmtDue = (iso) => {
-          if (!iso) return "No due date";
-          const d = new Date(iso);
-          return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
-        };
-
         return (
-          <>
-            <div className="modal" style={{ marginTop: 14, maxWidth: "none" }}>
-              <h3>Add assignment</h3>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 220px auto", gap: 10 }}>
-                <input
-                  value={assignment}
-                  onChange={(e) => setAssignment(e.target.value)}
-                  placeholder="Assignment (e.g., Week 3 Discussion)"
-                  disabled={isLocked}
-                />
-                <input type="date" value={due} onChange={(e) => setDue(e.target.value)} disabled={isLocked}/>
-                <button className="primary" onClick={addAssignment} disabled={isLocked}>Add</button>
-              </div>
-            </div>
+          <div className="board" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+            {SNHU_COLS.map((col) => (
+              <div key={col.key} className="col">
+                <div className="colHeader">
+                  <h2>{col.title}</h2>
+                  <span>
+                    {col.sections
+                      ? col.sections.reduce((sum, s) => sum + (buckets[s.key]?.length || 0), 0)
+                      : (buckets[col.dropKey]?.length || 0)
+                    }
+                  </span>
+                </div>
 
-            <div className="board" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
-              {SNHU_COLS.map((col) => (
-                <div key={col.key} className="col">
-                  <div className="colHeader">
-                    <h2>{col.title}</h2>
-                    <span>{col.sections.reduce((sum, s) => sum + (cardsBySection[s.key]?.length || 0), 0)}</span>
-                  </div>
-
-                  <div className="dropZone">
-                    {col.sections.map((sec) => (
+                <div className="dropZone">
+                  {col.sections ? (
+                    col.sections.map((sec) => (
                       <div
                         key={sec.key}
                         className={"subsection " + (!isLocked && dragOverId === sec.key ? "dragOver" : "")}
@@ -637,14 +669,14 @@
                         <div className="subHeader">
                           <b>{sec.title}</b>
                           <span style={{ color: "rgba(255,255,255,.65)", fontSize: 12 }}>
-                            {(cardsBySection[sec.key] || []).length}
+                            {(buckets[sec.key] || []).length}
                           </span>
                         </div>
 
                         <div className="subBody">
-                          {(cardsBySection[sec.key] || []).length === 0 ? <div className="hint"></div> : null}
+                          {(buckets[sec.key] || []).length === 0 ? <div className="hint"></div> : null}
 
-                          {(cardsBySection[sec.key] || []).map((card) => (
+                          {(buckets[sec.key] || []).map((card) => (
                             <div
                               key={card.id}
                               className="card"
@@ -654,38 +686,62 @@
                             >
                               <div className="cardTop">
                                 <div>
-                                  <p className="name">{card.title}</p>
-                                  <div className="subline">Due: {fmtDue(card.dueDate)}</div>
+                                  <p className="courseTitle">{card.title}</p>
+                                  <div className="termLine">{card.term}</div>
                                 </div>
                                 <div>
                                   <button onClick={() => removeCard(card.id)} disabled={isLocked}>Delete</button>
                                 </div>
                               </div>
-
-                              <div style={{ display:"flex", gap:10, flexWrap:"wrap", marginTop: 10 }}>
-                                <input
-                                  value={card.title}
-                                  onChange={(e) => updateCard(card.id, { title: e.target.value })}
-                                  style={{ minWidth: 240 }}
-                                  disabled={isLocked}
-                                />
-                                <input
-                                  type="date"
-                                  value={card.dueDate ? new Date(card.dueDate).toISOString().slice(0,10) : ""}
-                                  onChange={(e) => updateCard(card.id, { dueDate: e.target.value ? new Date(e.target.value).toISOString() : null })}
-                                  disabled={isLocked}
-                                />
-                              </div>
                             </div>
                           ))}
                         </div>
                       </div>
-                    ))}
-                  </div>
+                    ))
+                  ) : (
+                    // ✅ Not Assigned has no sections
+                    <div
+                      className={"subsection " + (!isLocked && dragOverId === col.dropKey ? "dragOver" : "")}
+                      onDragOver={(e) => { allowDrop(e); if (!isLocked) setDragOverId(col.dropKey); }}
+                      onDragLeave={() => setDragOverId(null)}
+                      onDrop={(e) => onDrop(e, col.dropKey)}
+                    >
+                      <div className="subHeader">
+                        <b>Not Assigned</b>
+                        <span style={{ color: "rgba(255,255,255,.65)", fontSize: 12 }}>
+                          {(buckets[col.dropKey] || []).length}
+                        </span>
+                      </div>
+
+                      <div className="subBody">
+                        {(buckets[col.dropKey] || []).length === 0 ? <div className="hint"></div> : null}
+
+                        {(buckets[col.dropKey] || []).map((card) => (
+                          <div
+                            key={card.id}
+                            className="card"
+                            draggable={!isLocked}
+                            onDragStart={(e) => onDragStart(e, card.id)}
+                            title={isLocked ? "Locked (view-only)" : "Drag to move"}
+                          >
+                            <div className="cardTop">
+                              <div>
+                                <p className="courseTitle">{card.title}</p>
+                                <div className="termLine">{card.term}</div>
+                              </div>
+                              <div>
+                                <button onClick={() => removeCard(card.id)} disabled={isLocked}>Delete</button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              ))}
-            </div>
-          </>
+              </div>
+            ))}
+          </div>
         );
       }
 
