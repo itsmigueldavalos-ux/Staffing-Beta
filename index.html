@@ -177,7 +177,6 @@
       .modalActions { display:flex; gap: 10px; justify-content: flex-end; margin-top: 12px; }
       .modalNote { font-size: 12px; color: rgba(255,255,255,.65); margin-top: 8px; line-height: 1.35; }
 
-      /* SNHU badge text style (no circle, just clean lines) */
       .courseTitle { font-weight: 800; font-size: 14px; margin: 0; }
       .termLine { font-size: 13px; color: rgba(255,255,255,.82); margin-top: 6px; }
     </style>
@@ -202,9 +201,9 @@
         { key: "na",  title: "Not Assigned", sections: [{ key: "na_default", title: "Default" }] },
       ];
 
-      // ✅ Updated SNHU board:
-      // - Current Term / Upcoming Term each keep Pending + In Progress
-      // - Not Assigned column has NO sections now (just a single drop area)
+      // ✅ SNHU board:
+      // - Current Term / Upcoming Term keep sections
+      // - Not Assigned has NO sections and is DEFAULT for all SNHU badges
       const SNHU_COLS = [
         {
           key: "cur",
@@ -225,8 +224,8 @@
         {
           key: "na",
           title: "Not Assigned",
-          sections: null, // ✅ no sections
-          dropKey: "snhu_na", // single bucket for this column
+          sections: null,
+          dropKey: "snhu_na",
         },
       ];
 
@@ -277,40 +276,46 @@
           };
         }
 
-        // ✅ Pre-made SNHU course badges (no circle UI; just text lines)
+        // ✅ These 4 SNHU course badges are now NON-DELETABLE (no Delete button shown)
+        // ✅ And default to "Not Assigned" (snhu_na)
         function snhuSeedCards() {
+          const nowIso = new Date().toISOString();
           return [
             {
-              id: "snhu-" + uid(),
+              id: "snhu-eng190",
               title: "ENG 190: Research and Persuasion",
               term: "C-2 Term - March thru April 2026",
-              col: "cur_pending",
+              col: "snhu_na",
               createdBy: loginName,
-              createdAt: new Date().toISOString(),
+              createdAt: nowIso,
+              locked: true,
             },
             {
-              id: "snhu-" + uid(),
+              id: "snhu-ids105",
               title: "IDS 105: Awareness and Online Learning",
               term: "C-2 Term - March thru April 2026",
-              col: "cur_pending",
+              col: "snhu_na",
               createdBy: loginName,
-              createdAt: new Date().toISOString(),
+              createdAt: nowIso,
+              locked: true,
             },
             {
-              id: "snhu-" + uid(),
+              id: "snhu-eco202",
               title: "ECO 202: Macroeconomics",
               term: "C-3 Term - May thru June 2026",
-              col: "up_pending",
+              col: "snhu_na",
               createdBy: loginName,
-              createdAt: new Date().toISOString(),
+              createdAt: nowIso,
+              locked: true,
             },
             {
-              id: "snhu-" + uid(),
+              id: "snhu-phl260",
               title: "PHL 260: Ethical Decision-Making & Problem-Solving",
               term: "C-3 Term - May thru June 2026",
-              col: "up_pending",
+              col: "snhu_na",
               createdBy: loginName,
-              createdAt: new Date().toISOString(),
+              createdAt: nowIso,
+              locked: true,
             },
           ];
         }
@@ -318,7 +323,7 @@
         function defaultState() {
           return {
             staffing: { cards: [miguelCard()] },
-            university: { cards: snhuSeedCards() }, // ✅ seed SNHU badges
+            university: { cards: snhuSeedCards() },
           };
         }
 
@@ -333,11 +338,10 @@
         }
 
         function migrateSnhuCol(oldCol) {
-          // valid buckets are: cur_pending, cur_progress, up_pending, up_progress, snhu_na
           const valid = new Set(["cur_pending","cur_progress","up_pending","up_progress","snhu_na"]);
           if (valid.has(oldCol)) return oldCol;
 
-          // previous versions:
+          // older versions:
           if (oldCol === "up_progress") return "up_progress";
           if (oldCol === "up_pending") return "up_pending";
           if (oldCol === "cur_progress") return "cur_progress";
@@ -347,7 +351,6 @@
           if (oldCol === "bus206_todo") return "cur_pending";
 
           if (oldCol === "doing") return "cur_progress";
-          // done/blocked/todo -> current pending
           return "cur_pending";
         }
 
@@ -355,36 +358,44 @@
           const raw = localStorage.getItem(storageKey);
           const parsed = raw ? safeParse(raw, defaultState()) : defaultState();
 
+          // staffing normalize
           parsed.staffing = parsed.staffing || { cards: [] };
           parsed.staffing.cards = Array.isArray(parsed.staffing.cards) ? parsed.staffing.cards : [];
           parsed.staffing.cards = parsed.staffing.cards.map((c) => ({ ...c, col: migrateStaffingCol(c.col) }));
 
+          // ensure Miguel exists
           const hasMiguel = parsed.staffing.cards.some(
             (c) => c && c.login === "migudavc" && (c.personName || "").toLowerCase().includes("miguel")
           );
           if (!hasMiguel) parsed.staffing.cards = [miguelCard(), ...parsed.staffing.cards];
 
+          // snhu normalize
           parsed.university = parsed.university || { cards: [] };
           parsed.university.cards = Array.isArray(parsed.university.cards) ? parsed.university.cards : [];
-
           parsed.university.cards = parsed.university.cards.map((c) => ({
             ...c,
             col: migrateSnhuCol(c.col),
           }));
 
-          // ensure the 4 SNHU badges exist at least once
-          const titlesNeeded = new Set([
-            "ENG 190: Research and Persuasion",
-            "IDS 105: Awareness and Online Learning",
-            "ECO 202: Macroeconomics",
-            "PHL 260: Ethical Decision-Making & Problem-Solving",
-          ]);
-          const existingTitles = new Set(parsed.university.cards.map(c => c && c.title).filter(Boolean));
-          const missing = [...titlesNeeded].filter(t => !existingTitles.has(t));
-          if (missing.length) {
-            const seeds = snhuSeedCards().filter(s => missing.includes(s.title));
-            parsed.university.cards = [...seeds, ...parsed.university.cards];
+          // Ensure the 4 SNHU locked badges exist, are locked, and default to Not Assigned
+          const seed = snhuSeedCards();
+          const byId = new Map(parsed.university.cards.map(c => [c.id, c]));
+          for (const s of seed) {
+            if (!byId.has(s.id)) {
+              parsed.university.cards.unshift(s);
+            } else {
+              const existing = byId.get(s.id);
+              // keep their current col if user moved them, otherwise force default Not Assigned
+              const nextCol = existing.col ? existing.col : "snhu_na";
+              byId.set(s.id, { ...existing, ...s, col: nextCol, locked: true });
+            }
           }
+          // rebuild list from map + any other cards
+          const rebuilt = [];
+          const seedIds = new Set(seed.map(x => x.id));
+          for (const s of seed) rebuilt.push(byId.get(s.id) || s);
+          for (const c of parsed.university.cards) if (!seedIds.has(c.id)) rebuilt.push(c);
+          parsed.university.cards = rebuilt;
 
           setState(parsed);
           // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -479,7 +490,6 @@
                   if (isLocked) { showToast("Locked (view-only). Unlock to edit."); return; }
                   touchUpdate({ ...state, university: nextUni });
                 }}
-                loginName={loginName}
                 isLocked={isLocked}
                 showToast={showToast}
               />
@@ -595,14 +605,9 @@
         );
       }
 
-      function SnhuBoard({ data, onChange, loginName, isLocked, showToast }) {
+      function SnhuBoard({ data, onChange, isLocked, showToast }) {
         const [dragOverId, setDragOverId] = useState(null);
         function blocked() { showToast("Locked (view-only). Unlock to edit."); }
-
-        function removeCard(id) {
-          if (isLocked) return blocked();
-          onChange({ ...data, cards: (data.cards || []).filter((c) => c.id !== id) });
-        }
 
         function updateCard(id, patch) {
           if (isLocked) return blocked();
@@ -642,6 +647,28 @@
           return m;
         }, [data.cards]);
 
+        function renderCard(card) {
+          const isSeedLocked = !!card.locked; // the 4 badges are locked
+          return (
+            <div
+              key={card.id}
+              className="card"
+              draggable={!isLocked}
+              onDragStart={(e) => onDragStart(e, card.id)}
+              title={isLocked ? "Locked (view-only)" : "Drag to move"}
+            >
+              <div className="cardTop">
+                <div>
+                  <p className="courseTitle">{card.title}</p>
+                  <div className="termLine">{card.term}</div>
+                </div>
+                {/* ✅ Delete button removed for the 4 specified locked badges */}
+                <div style={{ width: 1 }} />
+              </div>
+            </div>
+          );
+        }
+
         return (
           <div className="board" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
             {SNHU_COLS.map((col) => (
@@ -675,31 +702,11 @@
 
                         <div className="subBody">
                           {(buckets[sec.key] || []).length === 0 ? <div className="hint"></div> : null}
-
-                          {(buckets[sec.key] || []).map((card) => (
-                            <div
-                              key={card.id}
-                              className="card"
-                              draggable={!isLocked}
-                              onDragStart={(e) => onDragStart(e, card.id)}
-                              title={isLocked ? "Locked (view-only)" : "Drag to move"}
-                            >
-                              <div className="cardTop">
-                                <div>
-                                  <p className="courseTitle">{card.title}</p>
-                                  <div className="termLine">{card.term}</div>
-                                </div>
-                                <div>
-                                  <button onClick={() => removeCard(card.id)} disabled={isLocked}>Delete</button>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
+                          {(buckets[sec.key] || []).map(renderCard)}
                         </div>
                       </div>
                     ))
                   ) : (
-                    // ✅ Not Assigned has no sections
                     <div
                       className={"subsection " + (!isLocked && dragOverId === col.dropKey ? "dragOver" : "")}
                       onDragOver={(e) => { allowDrop(e); if (!isLocked) setDragOverId(col.dropKey); }}
@@ -715,26 +722,7 @@
 
                       <div className="subBody">
                         {(buckets[col.dropKey] || []).length === 0 ? <div className="hint"></div> : null}
-
-                        {(buckets[col.dropKey] || []).map((card) => (
-                          <div
-                            key={card.id}
-                            className="card"
-                            draggable={!isLocked}
-                            onDragStart={(e) => onDragStart(e, card.id)}
-                            title={isLocked ? "Locked (view-only)" : "Drag to move"}
-                          >
-                            <div className="cardTop">
-                              <div>
-                                <p className="courseTitle">{card.title}</p>
-                                <div className="termLine">{card.term}</div>
-                              </div>
-                              <div>
-                                <button onClick={() => removeCard(card.id)} disabled={isLocked}>Delete</button>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
+                        {(buckets[col.dropKey] || []).map(renderCard)}
                       </div>
                     </div>
                   )}
