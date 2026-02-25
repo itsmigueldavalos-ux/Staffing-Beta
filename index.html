@@ -46,22 +46,10 @@
         outline: none;
       }
       button { cursor: pointer; }
-      button.primary {
-        background: rgba(29,185,84,.15);
-        border-color: rgba(29,185,84,.35);
-      }
-      button.danger {
-        background: rgba(255,77,77,.12);
-        border-color: rgba(255,77,77,.35);
-      }
-      button.lock {
-        background: rgba(255,176,32,.14);
-        border-color: rgba(255,176,32,.35);
-      }
-      button.lock.active {
-        background: rgba(255,77,77,.14);
-        border-color: rgba(255,77,77,.35);
-      }
+      button.primary { background: rgba(29,185,84,.15); border-color: rgba(29,185,84,.35); }
+      button.danger { background: rgba(255,77,77,.12); border-color: rgba(255,77,77,.35); }
+      button.lock { background: rgba(255,176,32,.14); border-color: rgba(255,176,32,.35); }
+      button.lock.active { background: rgba(255,77,77,.14); border-color: rgba(255,77,77,.35); }
 
       .tabs { margin-top: 14px; display: flex; gap: 10px; flex-wrap: wrap; }
       .tab {
@@ -201,36 +189,14 @@
         { key: "na",  title: "Not Assigned", sections: [{ key: "na_default", title: "Default" }] },
       ];
 
-      // SNHU board:
-      // - Current Term / Upcoming Term sections
-      // - Not Assigned has no sections and is the default bucket
       const SNHU_COLS = [
-        {
-          key: "cur",
-          title: "Current Term",
-          sections: [
-            { key: "cur_pending", title: "Pending" },
-            { key: "cur_progress", title: "In Progress" },
-          ],
-        },
-        {
-          key: "up",
-          title: "Upcoming Term",
-          sections: [
-            { key: "up_pending", title: "Pending" },
-            { key: "up_progress", title: "In Progress" },
-          ],
-        },
-        {
-          key: "na",
-          title: "Not Assigned",
-          sections: null,
-          dropKey: "snhu_na",
-        },
+        { key: "cur", title: "Current Term", sections: [{ key: "cur_pending", title: "Pending" }, { key: "cur_progress", title: "In Progress" }] },
+        { key: "up",  title: "Upcoming Term", sections: [{ key: "up_pending", title: "Pending" }, { key: "up_progress", title: "In Progress" }] },
+        { key: "na",  title: "Not Assigned", sections: null, dropKey: "snhu_na" },
       ];
 
-      // The 4 course badges are forced to stay in SNHU Not Assigned.
-      const SNHU_LOCKED_IDS = new Set(["snhu-eng190","snhu-ids105","snhu-eco202","snhu-phl260"]);
+      const SNHU_LOCKED_IDS = ["snhu-eng190","snhu-ids105","snhu-eco202","snhu-phl260"];
+      const SNHU_LOCKED_ID_SET = new Set(SNHU_LOCKED_IDS);
 
       const todayStr = () => {
         const d = new Date();
@@ -279,53 +245,21 @@
           };
         }
 
-        // 4 SNHU course badges (non-deletable UI; forced to Not Assigned bucket)
-        function snhuSeedCards() {
+        // Canonical SNHU badges (fixed IDs). These should exist ONCE.
+        function snhuCanonicalCards() {
           const nowIso = new Date().toISOString();
           return [
-            {
-              id: "snhu-eng190",
-              title: "ENG 190: Research and Persuasion",
-              term: "C-2 Term - March thru April 2026",
-              col: "snhu_na",
-              createdBy: loginName,
-              createdAt: nowIso,
-              locked: true,
-            },
-            {
-              id: "snhu-ids105",
-              title: "IDS 105: Awareness and Online Learning",
-              term: "C-2 Term - March thru April 2026",
-              col: "snhu_na",
-              createdBy: loginName,
-              createdAt: nowIso,
-              locked: true,
-            },
-            {
-              id: "snhu-eco202",
-              title: "ECO 202: Macroeconomics",
-              term: "C-3 Term - May thru June 2026",
-              col: "snhu_na",
-              createdBy: loginName,
-              createdAt: nowIso,
-              locked: true,
-            },
-            {
-              id: "snhu-phl260",
-              title: "PHL 260: Ethical Decision-Making & Problem-Solving",
-              term: "C-3 Term - May thru June 2026",
-              col: "snhu_na",
-              createdBy: loginName,
-              createdAt: nowIso,
-              locked: true,
-            },
+            { id: "snhu-eng190", title: "ENG 190: Research and Persuasion", term: "C-2 Term - March thru April 2026", col: "snhu_na", locked: true, createdBy: loginName, createdAt: nowIso },
+            { id: "snhu-ids105", title: "IDS 105: Awareness and Online Learning", term: "C-2 Term - March thru April 2026", col: "snhu_na", locked: true, createdBy: loginName, createdAt: nowIso },
+            { id: "snhu-eco202", title: "ECO 202: Macroeconomics", term: "C-3 Term - May thru June 2026", col: "snhu_na", locked: true, createdBy: loginName, createdAt: nowIso },
+            { id: "snhu-phl260", title: "PHL 260: Ethical Decision-Making & Problem-Solving", term: "C-3 Term - May thru June 2026", col: "snhu_na", locked: true, createdBy: loginName, createdAt: nowIso },
           ];
         }
 
         function defaultState() {
           return {
             staffing: { cards: [miguelCard()] },
-            university: { cards: snhuSeedCards() },
+            university: { cards: snhuCanonicalCards() },
           };
         }
 
@@ -342,11 +276,39 @@
         function migrateSnhuCol(oldCol) {
           const valid = new Set(["cur_pending","cur_progress","up_pending","up_progress","snhu_na"]);
           if (valid.has(oldCol)) return oldCol;
-
           if (oldCol === "bus206_doing") return "cur_progress";
           if (oldCol === "bus206_todo") return "cur_pending";
           if (oldCol === "doing") return "cur_progress";
           return "cur_pending";
+        }
+
+        // ✅ Deduplicate SNHU locked badges:
+        // - Keep exactly ONE canonical badge per locked ID
+        // - Remove any other cards that match those titles/terms (old copies)
+        function dedupeSnhuLockedCards(cards) {
+          const canonical = snhuCanonicalCards();
+          const canonById = new Map(canonical.map(c => [c.id, c]));
+          const lockedTitleTermKey = (c) => `${(c.title||"").trim()}||${(c.term||"").trim()}`;
+
+          const canonKeys = new Set(canonical.map(lockedTitleTermKey));
+
+          // 1) Build a list of non-duplicate "other" cards, excluding any that match canonical title+term
+          const keptOthers = [];
+          for (const c of cards) {
+            if (!c) continue;
+
+            // drop any extra copies by title+term if it matches one of the 4 canonical badges
+            if (canonKeys.has(lockedTitleTermKey(c))) continue;
+
+            // also drop any random copies that reused the canonical IDs (we will re-add canon below)
+            if (canonById.has(c.id)) continue;
+
+            keptOthers.push(c);
+          }
+
+          // 2) Return: canonical (forced to Not Assigned) + others
+          const forcedCanon = canonical.map(c => ({ ...c, col: "snhu_na", locked: true }));
+          return [...forcedCanon, ...keptOthers];
         }
 
         useEffect(() => {
@@ -358,7 +320,6 @@
           parsed.staffing.cards = Array.isArray(parsed.staffing.cards) ? parsed.staffing.cards : [];
           parsed.staffing.cards = parsed.staffing.cards.map((c) => ({ ...c, col: migrateStaffingCol(c.col) }));
 
-          // ensure Miguel exists
           const hasMiguel = parsed.staffing.cards.some(
             (c) => c && c.login === "migudavc" && (c.personName || "").toLowerCase().includes("miguel")
           );
@@ -369,39 +330,12 @@
           parsed.university.cards = Array.isArray(parsed.university.cards) ? parsed.university.cards : [];
           parsed.university.cards = parsed.university.cards.map((c) => ({ ...c, col: migrateSnhuCol(c.col) }));
 
-          // ✅ HARD RULE:
-          // These 4 badges are always moved OUT of Current/Upcoming and forced into Not Assigned (snhu_na)
-          const seed = snhuSeedCards();
-          const byId = new Map(parsed.university.cards.map(c => [c.id, c]));
-
-          for (const s of seed) {
-            const existing = byId.get(s.id);
-            if (!existing) {
-              byId.set(s.id, s);
-            } else {
-              byId.set(s.id, { ...existing, ...s, col: "snhu_na", locked: true }); // <- force Not Assigned
-            }
-          }
-
-          // also catch any duplicates by title (older saved copies) and force them to Not Assigned too
-          const lockedTitles = new Set(seed.map(x => x.title));
-          const rebuilt = [];
-          const seenLockedId = new Set(seed.map(x => x.id));
-
-          // put the 4 official locked badges first
-          for (const s of seed) rebuilt.push(byId.get(s.id) || s);
-
-          // then keep the rest, but if they match those titles, force to Not Assigned (so they are removed from Current/Upcoming)
-          for (const c of parsed.university.cards) {
-            if (seenLockedId.has(c.id)) continue;
-            if (lockedTitles.has(c.title)) {
-              rebuilt.push({ ...c, col: "snhu_na", locked: true });
-            } else {
-              rebuilt.push(c);
-            }
-          }
-
-          parsed.university.cards = rebuilt;
+          // Force the 4 locked IDs into Not Assigned AND remove duplicates
+          parsed.university.cards = parsed.university.cards.map((c) => {
+            if (SNHU_LOCKED_ID_SET.has(c.id)) return { ...c, col: "snhu_na", locked: true };
+            return c;
+          });
+          parsed.university.cards = dedupeSnhuLockedCards(parsed.university.cards);
 
           setState(parsed);
           // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -429,10 +363,7 @@
           showToast("Board locked (view-only).");
         }
 
-        function requestUnlock() {
-          setUnlockModalOpen(true);
-        }
-
+        function requestUnlock() { setUnlockModalOpen(true); }
         function unlockNow() {
           setIsLocked(false);
           setUnlockModalOpen(false);
@@ -455,13 +386,9 @@
 
               <div className="controls">
                 {isLocked ? (
-                  <button className="lock active" onClick={requestUnlock} title="Unlock board">
-                    Unlock
-                  </button>
+                  <button className="lock active" onClick={requestUnlock} title="Unlock board">Unlock</button>
                 ) : (
-                  <button className="lock" onClick={lockNow} title="Lock makes the board view-only">
-                    Lock Board
-                  </button>
+                  <button className="lock" onClick={lockNow} title="Lock makes the board view-only">Lock Board</button>
                 )}
 
                 <button className="danger" onClick={resetBoards} title="Resets boards (re-adds Miguel card if needed)">
@@ -638,8 +565,7 @@
           const cardId = e.dataTransfer.getData("text/plain");
           if (!cardId) return;
 
-          // If one of the 4 locked course badges is dragged, force it back to Not Assigned.
-          const forcedBucket = SNHU_LOCKED_IDS.has(cardId) ? "snhu_na" : bucketKey;
+          const forcedBucket = SNHU_LOCKED_ID_SET.has(cardId) ? "snhu_na" : bucketKey;
           updateCard(cardId, { col: forcedBucket });
           setDragOverId(null);
         }
