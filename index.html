@@ -245,7 +245,6 @@
           };
         }
 
-        // Canonical SNHU badges (fixed IDs). These should exist ONCE.
         function snhuCanonicalCards() {
           const nowIso = new Date().toISOString();
           return [
@@ -282,31 +281,20 @@
           return "cur_pending";
         }
 
-        // ✅ Deduplicate SNHU locked badges:
-        // - Keep exactly ONE canonical badge per locked ID
-        // - Remove any other cards that match those titles/terms (old copies)
         function dedupeSnhuLockedCards(cards) {
           const canonical = snhuCanonicalCards();
           const canonById = new Map(canonical.map(c => [c.id, c]));
-          const lockedTitleTermKey = (c) => `${(c.title||"").trim()}||${(c.term||"").trim()}`;
+          const key = (c) => `${(c.title||"").trim()}||${(c.term||"").trim()}`;
+          const canonKeys = new Set(canonical.map(key));
 
-          const canonKeys = new Set(canonical.map(lockedTitleTermKey));
-
-          // 1) Build a list of non-duplicate "other" cards, excluding any that match canonical title+term
           const keptOthers = [];
           for (const c of cards) {
             if (!c) continue;
-
-            // drop any extra copies by title+term if it matches one of the 4 canonical badges
-            if (canonKeys.has(lockedTitleTermKey(c))) continue;
-
-            // also drop any random copies that reused the canonical IDs (we will re-add canon below)
-            if (canonById.has(c.id)) continue;
-
+            if (canonKeys.has(key(c))) continue;      // remove duplicates by title+term
+            if (canonById.has(c.id)) continue;        // remove duplicates by ID
             keptOthers.push(c);
           }
 
-          // 2) Return: canonical (forced to Not Assigned) + others
           const forcedCanon = canonical.map(c => ({ ...c, col: "snhu_na", locked: true }));
           return [...forcedCanon, ...keptOthers];
         }
@@ -330,7 +318,7 @@
           parsed.university.cards = Array.isArray(parsed.university.cards) ? parsed.university.cards : [];
           parsed.university.cards = parsed.university.cards.map((c) => ({ ...c, col: migrateSnhuCol(c.col) }));
 
-          // Force the 4 locked IDs into Not Assigned AND remove duplicates
+          // Force locked IDs into Not Assigned + dedupe
           parsed.university.cards = parsed.university.cards.map((c) => {
             if (SNHU_LOCKED_ID_SET.has(c.id)) return { ...c, col: "snhu_na", locked: true };
             return c;
@@ -497,9 +485,10 @@
                     <div
                       key={sec.key}
                       className={"subsection " + (!isLocked && dragOverId === sec.key ? "dragOver" : "")}
-                      onDragOver={(e) => { allowDrop(e); if (!isLocked) setDragOverId(sec.key); }}
+                      onDragOverCapture={(e) => { allowDrop(e); if (!isLocked) setDragOverId(sec.key); }}
+                      onDragEnterCapture={(e) => { allowDrop(e); if (!isLocked) setDragOverId(sec.key); }}
+                      onDropCapture={(e) => onDrop(e, sec.key)}
                       onDragLeave={() => setDragOverId(null)}
-                      onDrop={(e) => onDrop(e, sec.key)}
                     >
                       <div className="subHeader">
                         <b>{sec.title}</b>
@@ -613,9 +602,10 @@
                       <div
                         key={sec.key}
                         className={"subsection " + (!isLocked && dragOverId === sec.key ? "dragOver" : "")}
-                        onDragOver={(e) => { allowDrop(e); if (!isLocked) setDragOverId(sec.key); }}
+                        onDragOverCapture={(e) => { allowDrop(e); if (!isLocked) setDragOverId(sec.key); }}
+                        onDragEnterCapture={(e) => { allowDrop(e); if (!isLocked) setDragOverId(sec.key); }}
+                        onDropCapture={(e) => onDrop(e, sec.key)}
                         onDragLeave={() => setDragOverId(null)}
-                        onDrop={(e) => onDrop(e, sec.key)}
                       >
                         <div className="subHeader">
                           <b>{sec.title}</b>
@@ -633,9 +623,10 @@
                   ) : (
                     <div
                       className={"subsection " + (!isLocked && dragOverId === col.dropKey ? "dragOver" : "")}
-                      onDragOver={(e) => { allowDrop(e); if (!isLocked) setDragOverId(col.dropKey); }}
+                      onDragOverCapture={(e) => { allowDrop(e); if (!isLocked) setDragOverId(col.dropKey); }}
+                      onDragEnterCapture={(e) => { allowDrop(e); if (!isLocked) setDragOverId(col.dropKey); }}
+                      onDropCapture={(e) => onDrop(e, col.dropKey)}
                       onDragLeave={() => setDragOverId(null)}
-                      onDrop={(e) => onDrop(e, col.dropKey)}
                     >
                       <div className="subHeader">
                         <b>Not Assigned</b>
