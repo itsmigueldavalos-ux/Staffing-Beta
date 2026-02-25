@@ -25,16 +25,51 @@
         color: var(--text);
       }
       .wrap { max-width: 1500px; margin: 0 auto; padding: 20px; }
+
+      /* TOPBAR LAYOUT: left title, centered Today, right controls+toggle */
       .topbar {
-        display: flex; gap: 12px; align-items: center; justify-content: space-between;
-        padding: 14px 16px; border: 1px solid var(--border); border-radius: 16px;
-        background: rgba(18,26,51,.78); box-shadow: var(--shadow);
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        gap: 12px;
+        align-items: center;
+        padding: 14px 16px;
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        background: rgba(18,26,51,.78);
+        box-shadow: var(--shadow);
         backdrop-filter: blur(8px);
       }
-      .title { display:flex; flex-direction: column; gap: 2px; }
+
+      .title {
+        display:flex;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 0;
+      }
       .title h1 { font-size: 18px; margin: 0; }
       .meta { font-size: 12px; color: var(--muted); display:flex; gap: 14px; flex-wrap: wrap; }
-      .controls { display:flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+
+      /* Center "Today" in same font size as title */
+      .todayCenter {
+        text-align: center;
+        font-size: 18px;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+
+      .rightPanel {
+        display:flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 10px;
+      }
+      .controls {
+        display:flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
 
       input, select, button {
         border: 1px solid var(--border);
@@ -51,15 +86,10 @@
       button.lock { background: rgba(255,176,32,.14); border-color: rgba(255,176,32,.35); }
       button.lock.active { background: rgba(255,77,77,.14); border-color: rgba(255,77,77,.35); }
 
-      .tabs { margin-top: 14px; display: flex; gap: 10px; flex-wrap: wrap; }
-      .tab {
-        padding: 10px 12px;
-        border-radius: 12px;
-        border: 1px solid var(--border);
-        background: rgba(255,255,255,.06);
-        cursor: pointer;
+      .boardToggle {
+        width: 360px;
+        max-width: 100%;
       }
-      .tab.active { background: rgba(255,255,255,.12); border-color: rgba(255,255,255,.20); }
 
       .board {
         margin-top: 14px;
@@ -69,7 +99,13 @@
       }
       @media (max-width: 1180px) { .board { grid-template-columns: repeat(3, 1fr); } }
       @media (max-width: 820px)  { .board { grid-template-columns: repeat(2, 1fr); } }
-      @media (max-width: 560px)  { .board { grid-template-columns: 1fr; } }
+      @media (max-width: 560px)  {
+        .topbar { grid-template-columns: 1fr; }
+        .todayCenter { text-align: left; }
+        .rightPanel { align-items: flex-start; }
+        .boardToggle { width: 100%; }
+        .board { grid-template-columns: 1fr; }
+      }
 
       .col {
         border: 1px solid var(--border);
@@ -209,7 +245,8 @@
       function App() {
         const loginName = "migudavc";
 
-        const [activeTab, setActiveTab] = useState("staffing");
+        // ✅ Active board toggle
+        const [activeBoard, setActiveBoard] = useState("amazon"); // amazon | snhu
         const [lastUpdated, setLastUpdated] = useState(() => localStorage.getItem("swb_lastUpdated") || nowStamp());
         const [toast, setToast] = useState("");
 
@@ -359,38 +396,45 @@
         return (
           <div className="wrap">
             <div className="topbar">
+              {/* LEFT: title + last updated */}
               <div className="title">
                 <h1>My Digital Board 2.0</h1>
                 <div className="meta">
-                  <span><strong>Today:</strong> {todayStr()}</span>
                   <span><strong>Last Updated:</strong> {lastUpdated}</span>
-                  <span><strong>Status:</strong> {isLocked ? "Locked (view-only)" : "Unlocked"}</span>
+                  <span><strong>{isLocked ? "Locked (view-only)" : "Unlocked"}</strong></span>
                 </div>
               </div>
 
-              <div className="controls">
-                {isLocked ? (
-                  <button className="lock active" onClick={requestUnlock} title="Unlock board">Unlock</button>
-                ) : (
-                  <button className="lock" onClick={lockNow} title="Lock makes the board view-only">Lock Board</button>
-                )}
+              {/* CENTER: Today */}
+              <div className="todayCenter">{todayStr()}</div>
 
-                <button className="danger" onClick={resetBoards} title="Resets boards (re-adds Miguel card if needed)">
-                  Reset Boards
-                </button>
+              {/* RIGHT: buttons + board toggle under them */}
+              <div className="rightPanel">
+                <div className="controls">
+                  {isLocked ? (
+                    <button className="lock active" onClick={requestUnlock} title="Unlock board">Unlock</button>
+                  ) : (
+                    <button className="lock" onClick={lockNow} title="Lock makes the board view-only">Lock Board</button>
+                  )}
+
+                  <button className="danger" onClick={resetBoards} title="Resets boards (re-adds Miguel card if needed)">
+                    Reset Boards
+                  </button>
+                </div>
+
+                <select
+                  className="boardToggle"
+                  value={activeBoard}
+                  onChange={(e) => setActiveBoard(e.target.value)}
+                  title="Select board"
+                >
+                  <option value="amazon">Amazon Workplace: Demorians Department</option>
+                  <option value="snhu">Southern New Hampshire University (SNHU)</option>
+                </select>
               </div>
             </div>
 
-            <div className="tabs">
-              <div className={"tab " + (activeTab === "staffing" ? "active" : "")} onClick={() => setActiveTab("staffing")}>
-                Amazon Workplace: Demorians Department
-              </div>
-              <div className={"tab " + (activeTab === "university" ? "active" : "")} onClick={() => setActiveTab("university")}>
-                Southern New Hampshire University (SNHU)
-              </div>
-            </div>
-
-            {activeTab === "staffing" ? (
+            {activeBoard === "amazon" ? (
               <StaffingBoard
                 data={state.staffing}
                 onChange={(nextStaffing) => {
