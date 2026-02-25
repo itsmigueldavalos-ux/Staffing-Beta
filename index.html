@@ -24,7 +24,7 @@
         background: radial-gradient(1200px 700px at 20% 0%, #15204a 0%, var(--bg) 55%);
         color: var(--text);
       }
-      .wrap { max-width: 1400px; margin: 0 auto; padding: 20px; }
+      .wrap { max-width: 1500px; margin: 0 auto; padding: 20px; }
       .topbar {
         display: flex; gap: 12px; align-items: center; justify-content: space-between;
         padding: 14px 16px; border: 1px solid var(--border); border-radius: 16px;
@@ -198,13 +198,30 @@
         { key: "na",  title: "Not Assigned", sections: [{ key: "na_default", title: "Default" }] },
       ];
 
+      // ✅ Updated SNHU board: 3 columns, each has Pending + In Progress sections
       const SNHU_COLS = [
         {
-          key: "bus206",
-          title: "BUS 206 (Business Law)",
+          key: "cur",
+          title: "Current Term",
           sections: [
-            { key: "bus206_todo", title: "To Do" },
-            { key: "bus206_doing", title: "In Progress" },
+            { key: "cur_pending", title: "Pending" },
+            { key: "cur_progress", title: "In Progress" },
+          ],
+        },
+        {
+          key: "up",
+          title: "Upcoming Term",
+          sections: [
+            { key: "up_pending", title: "Pending" },
+            { key: "up_progress", title: "In Progress" },
+          ],
+        },
+        {
+          key: "na",
+          title: "Not Assigned",
+          sections: [
+            { key: "snhu_na_pending", title: "Pending" },
+            { key: "snhu_na_progress", title: "In Progress" },
           ],
         },
       ];
@@ -229,8 +246,6 @@
 
         const lockKey = useMemo(() => `swb_locked_${loginName || "anonymous"}`, [loginName]);
         const [isLocked, setIsLocked] = useState(() => localStorage.getItem(lockKey) === "1");
-
-        // ✅ simple lock/unlock confirmation modal (no PIN)
         const [unlockModalOpen, setUnlockModalOpen] = useState(false);
 
         const storageKey = useMemo(() => `swb_state_${loginName || "anonymous"}`, [loginName]);
@@ -278,8 +293,14 @@
         function migrateSnhuCol(oldCol) {
           const known = new Set(SNHU_COLS.flatMap(c => c.sections.map(s => s.key)));
           if (known.has(oldCol)) return oldCol;
-          if (oldCol === "doing") return "bus206_doing";
-          return "bus206_todo";
+
+          // previous versions: bus206_todo/bus206_doing
+          if (oldCol === "bus206_doing") return "cur_progress";
+          if (oldCol === "bus206_todo") return "cur_pending";
+
+          // older versions: todo/doing/done/blocked
+          if (oldCol === "doing") return "cur_progress";
+          return "cur_pending";
         }
 
         useEffect(() => {
@@ -368,7 +389,7 @@
 
             <div className="tabs">
               <div className={"tab " + (activeTab === "staffing" ? "active" : "")} onClick={() => setActiveTab("staffing")}>
-                Staffing Board
+                Amazon Workplace: Demorians Department
               </div>
               <div className={"tab " + (activeTab === "university" ? "active" : "")} onClick={() => setActiveTab("university")}>
                 Southern New Hampshire University (SNHU)
@@ -527,7 +548,7 @@
             id: uid(),
             title: a,
             dueDate: due ? new Date(due).toISOString() : null,
-            col: "bus206_todo",
+            col: "cur_pending", // default to Current Term > Pending
             createdBy: loginName || "anonymous",
             createdAt: new Date().toISOString(),
           };
@@ -596,7 +617,7 @@
               </div>
             </div>
 
-            <div className="board" style={{ gridTemplateColumns: "1fr" }}>
+            <div className="board" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
               {SNHU_COLS.map((col) => (
                 <div key={col.key} className="col">
                   <div className="colHeader">
@@ -645,7 +666,7 @@
                                 <input
                                   value={card.title}
                                   onChange={(e) => updateCard(card.id, { title: e.target.value })}
-                                  style={{ minWidth: 260 }}
+                                  style={{ minWidth: 240 }}
                                   disabled={isLocked}
                                 />
                                 <input
