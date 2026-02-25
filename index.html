@@ -195,9 +195,6 @@
         { key: "na",  title: "Not Assigned", sections: null, dropKey: "snhu_na" },
       ];
 
-      const SNHU_LOCKED_IDS = ["snhu-eng190","snhu-ids105","snhu-eco202","snhu-phl260"];
-      const SNHU_LOCKED_ID_SET = new Set(SNHU_LOCKED_IDS);
-
       const todayStr = () => {
         const d = new Date();
         return d.toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" });
@@ -245,6 +242,10 @@
           };
         }
 
+        // SNHU canonical badges:
+        // - default col is snhu_na (Not Assigned)
+        // - movable when board is unlocked (we do NOT force them back anymore)
+        // - duplicates are removed
         function snhuCanonicalCards() {
           const nowIso = new Date().toISOString();
           return [
@@ -278,25 +279,43 @@
           if (oldCol === "bus206_doing") return "cur_progress";
           if (oldCol === "bus206_todo") return "cur_pending";
           if (oldCol === "doing") return "cur_progress";
-          return "cur_pending";
+          return "snhu_na"; // safer default for older state
         }
 
-        function dedupeSnhuLockedCards(cards) {
+        // ✅ Remove duplicates of the 4 SNHU badges (by ID, and by title+term copies)
+        // ✅ Keep their CURRENT col if you moved them previously.
+        function normalizeSnhuCards(cards) {
           const canonical = snhuCanonicalCards();
           const canonById = new Map(canonical.map(c => [c.id, c]));
           const key = (c) => `${(c.title||"").trim()}||${(c.term||"").trim()}`;
           const canonKeys = new Set(canonical.map(key));
 
-          const keptOthers = [];
+          // Map existing by ID so we can keep the user's current column
+          const existingById = new Map();
           for (const c of cards) {
-            if (!c) continue;
-            if (canonKeys.has(key(c))) continue;      // remove duplicates by title+term
-            if (canonById.has(c.id)) continue;        // remove duplicates by ID
-            keptOthers.push(c);
+            if (c && c.id) existingById.set(c.id, c);
           }
 
-          const forcedCanon = canonical.map(c => ({ ...c, col: "snhu_na", locked: true }));
-          return [...forcedCanon, ...keptOthers];
+          // Start with canonical (keep existing col if present, else default Not Assigned)
+          const result = [];
+          for (const canon of canonical) {
+            const existing = existingById.get(canon.id);
+            result.push({
+              ...canon,
+              col: existing?.col ? existing.col : "snhu_na",
+              locked: true, // informational only; we don't render delete buttons anyway
+            });
+          }
+
+          // Add non-canonical cards, excluding duplicates of those 4 by title+term
+          for (const c of cards) {
+            if (!c) continue;
+            if (canonById.has(c.id)) continue;           // ignore extra copies of canonical IDs
+            if (canonKeys.has(key(c))) continue;         // ignore title+term duplicates
+            result.push(c);
+          }
+
+          return result;
         }
 
         useEffect(() => {
@@ -313,17 +332,11 @@
           );
           if (!hasMiguel) parsed.staffing.cards = [miguelCard(), ...parsed.staffing.cards];
 
-          // snhu normalize
+          // snhu normalize + dedupe (DO NOT force to Not Assigned anymore)
           parsed.university = parsed.university || { cards: [] };
           parsed.university.cards = Array.isArray(parsed.university.cards) ? parsed.university.cards : [];
           parsed.university.cards = parsed.university.cards.map((c) => ({ ...c, col: migrateSnhuCol(c.col) }));
-
-          // Force locked IDs into Not Assigned + dedupe
-          parsed.university.cards = parsed.university.cards.map((c) => {
-            if (SNHU_LOCKED_ID_SET.has(c.id)) return { ...c, col: "snhu_na", locked: true };
-            return c;
-          });
-          parsed.university.cards = dedupeSnhuLockedCards(parsed.university.cards);
+          parsed.university.cards = normalizeSnhuCards(parsed.university.cards);
 
           setState(parsed);
           // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -554,8 +567,8 @@
           const cardId = e.dataTransfer.getData("text/plain");
           if (!cardId) return;
 
-          const forcedBucket = SNHU_LOCKED_ID_SET.has(cardId) ? "snhu_na" : bucketKey;
-          updateCard(cardId, { col: forcedBucket });
+          // ✅ Allow Not Assigned badges to move anywhere (no forced bucket)
+          updateCard(cardId, { col: bucketKey });
           setDragOverId(null);
         }
 
