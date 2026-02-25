@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Staffing Whiteboard</title>
+    <title>My Digital Board 2.0</title>
 
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -242,17 +242,13 @@
           };
         }
 
-        // SNHU canonical badges:
-        // - default col is snhu_na (Not Assigned)
-        // - movable when board is unlocked (we do NOT force them back anymore)
-        // - duplicates are removed
         function snhuCanonicalCards() {
           const nowIso = new Date().toISOString();
           return [
-            { id: "snhu-eng190", title: "ENG 190: Research and Persuasion", term: "C-2 Term - March thru April 2026", col: "snhu_na", locked: true, createdBy: loginName, createdAt: nowIso },
-            { id: "snhu-ids105", title: "IDS 105: Awareness and Online Learning", term: "C-2 Term - March thru April 2026", col: "snhu_na", locked: true, createdBy: loginName, createdAt: nowIso },
-            { id: "snhu-eco202", title: "ECO 202: Macroeconomics", term: "C-3 Term - May thru June 2026", col: "snhu_na", locked: true, createdBy: loginName, createdAt: nowIso },
-            { id: "snhu-phl260", title: "PHL 260: Ethical Decision-Making & Problem-Solving", term: "C-3 Term - May thru June 2026", col: "snhu_na", locked: true, createdBy: loginName, createdAt: nowIso },
+            { id: "snhu-eng190", title: "ENG 190: Research and Persuasion", term: "C-2 Term - March thru April 2026", col: "snhu_na", createdBy: loginName, createdAt: nowIso },
+            { id: "snhu-ids105", title: "IDS 105: Awareness and Online Learning", term: "C-2 Term - March thru April 2026", col: "snhu_na", createdBy: loginName, createdAt: nowIso },
+            { id: "snhu-eco202", title: "ECO 202: Macroeconomics", term: "C-3 Term - May thru June 2026", col: "snhu_na", createdBy: loginName, createdAt: nowIso },
+            { id: "snhu-phl260", title: "PHL 260: Ethical Decision-Making & Problem-Solving", term: "C-3 Term - May thru June 2026", col: "snhu_na", createdBy: loginName, createdAt: nowIso },
           ];
         }
 
@@ -279,39 +275,28 @@
           if (oldCol === "bus206_doing") return "cur_progress";
           if (oldCol === "bus206_todo") return "cur_pending";
           if (oldCol === "doing") return "cur_progress";
-          return "snhu_na"; // safer default for older state
+          return "snhu_na";
         }
 
-        // ✅ Remove duplicates of the 4 SNHU badges (by ID, and by title+term copies)
-        // ✅ Keep their CURRENT col if you moved them previously.
         function normalizeSnhuCards(cards) {
           const canonical = snhuCanonicalCards();
           const canonById = new Map(canonical.map(c => [c.id, c]));
           const key = (c) => `${(c.title||"").trim()}||${(c.term||"").trim()}`;
           const canonKeys = new Set(canonical.map(key));
 
-          // Map existing by ID so we can keep the user's current column
           const existingById = new Map();
-          for (const c of cards) {
-            if (c && c.id) existingById.set(c.id, c);
-          }
+          for (const c of cards) if (c && c.id) existingById.set(c.id, c);
 
-          // Start with canonical (keep existing col if present, else default Not Assigned)
           const result = [];
           for (const canon of canonical) {
             const existing = existingById.get(canon.id);
-            result.push({
-              ...canon,
-              col: existing?.col ? existing.col : "snhu_na",
-              locked: true, // informational only; we don't render delete buttons anyway
-            });
+            result.push({ ...canon, col: existing?.col ? existing.col : "snhu_na" });
           }
 
-          // Add non-canonical cards, excluding duplicates of those 4 by title+term
           for (const c of cards) {
             if (!c) continue;
-            if (canonById.has(c.id)) continue;           // ignore extra copies of canonical IDs
-            if (canonKeys.has(key(c))) continue;         // ignore title+term duplicates
+            if (canonById.has(c.id)) continue;
+            if (canonKeys.has(key(c))) continue;
             result.push(c);
           }
 
@@ -322,7 +307,6 @@
           const raw = localStorage.getItem(storageKey);
           const parsed = raw ? safeParse(raw, defaultState()) : defaultState();
 
-          // staffing normalize
           parsed.staffing = parsed.staffing || { cards: [] };
           parsed.staffing.cards = Array.isArray(parsed.staffing.cards) ? parsed.staffing.cards : [];
           parsed.staffing.cards = parsed.staffing.cards.map((c) => ({ ...c, col: migrateStaffingCol(c.col) }));
@@ -332,7 +316,6 @@
           );
           if (!hasMiguel) parsed.staffing.cards = [miguelCard(), ...parsed.staffing.cards];
 
-          // snhu normalize + dedupe (DO NOT force to Not Assigned anymore)
           parsed.university = parsed.university || { cards: [] };
           parsed.university.cards = Array.isArray(parsed.university.cards) ? parsed.university.cards : [];
           parsed.university.cards = parsed.university.cards.map((c) => ({ ...c, col: migrateSnhuCol(c.col) }));
@@ -377,7 +360,7 @@
           <div className="wrap">
             <div className="topbar">
               <div className="title">
-                <h1>Staffing Digital Whiteboard</h1>
+                <h1>My Digital Board 2.0</h1>
                 <div className="meta">
                   <span><strong>Today:</strong> {todayStr()}</span>
                   <span><strong>Last Updated:</strong> {lastUpdated}</span>
@@ -566,8 +549,6 @@
           e.preventDefault();
           const cardId = e.dataTransfer.getData("text/plain");
           if (!cardId) return;
-
-          // ✅ Allow Not Assigned badges to move anywhere (no forced bucket)
           updateCard(cardId, { col: bucketKey });
           setDragOverId(null);
         }
