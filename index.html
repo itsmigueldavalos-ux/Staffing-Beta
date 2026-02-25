@@ -201,9 +201,9 @@
         { key: "na",  title: "Not Assigned", sections: [{ key: "na_default", title: "Default" }] },
       ];
 
-      // ✅ SNHU board:
-      // - Current Term / Upcoming Term keep sections
-      // - Not Assigned has NO sections and is DEFAULT for all SNHU badges
+      // SNHU board:
+      // - Current Term / Upcoming Term sections
+      // - Not Assigned has no sections and is the default bucket
       const SNHU_COLS = [
         {
           key: "cur",
@@ -228,6 +228,9 @@
           dropKey: "snhu_na",
         },
       ];
+
+      // The 4 course badges are forced to stay in SNHU Not Assigned.
+      const SNHU_LOCKED_IDS = new Set(["snhu-eng190","snhu-ids105","snhu-eco202","snhu-phl260"]);
 
       const todayStr = () => {
         const d = new Date();
@@ -276,8 +279,7 @@
           };
         }
 
-        // ✅ These 4 SNHU course badges are now NON-DELETABLE (no Delete button shown)
-        // ✅ And default to "Not Assigned" (snhu_na)
+        // 4 SNHU course badges (non-deletable UI; forced to Not Assigned bucket)
         function snhuSeedCards() {
           const nowIso = new Date().toISOString();
           return [
@@ -341,15 +343,8 @@
           const valid = new Set(["cur_pending","cur_progress","up_pending","up_progress","snhu_na"]);
           if (valid.has(oldCol)) return oldCol;
 
-          // older versions:
-          if (oldCol === "up_progress") return "up_progress";
-          if (oldCol === "up_pending") return "up_pending";
-          if (oldCol === "cur_progress") return "cur_progress";
-          if (oldCol === "cur_pending") return "cur_pending";
-
           if (oldCol === "bus206_doing") return "cur_progress";
           if (oldCol === "bus206_todo") return "cur_pending";
-
           if (oldCol === "doing") return "cur_progress";
           return "cur_pending";
         }
@@ -372,29 +367,40 @@
           // snhu normalize
           parsed.university = parsed.university || { cards: [] };
           parsed.university.cards = Array.isArray(parsed.university.cards) ? parsed.university.cards : [];
-          parsed.university.cards = parsed.university.cards.map((c) => ({
-            ...c,
-            col: migrateSnhuCol(c.col),
-          }));
+          parsed.university.cards = parsed.university.cards.map((c) => ({ ...c, col: migrateSnhuCol(c.col) }));
 
-          // Ensure the 4 SNHU locked badges exist, are locked, and default to Not Assigned
+          // ✅ HARD RULE:
+          // These 4 badges are always moved OUT of Current/Upcoming and forced into Not Assigned (snhu_na)
           const seed = snhuSeedCards();
           const byId = new Map(parsed.university.cards.map(c => [c.id, c]));
+
           for (const s of seed) {
-            if (!byId.has(s.id)) {
-              parsed.university.cards.unshift(s);
+            const existing = byId.get(s.id);
+            if (!existing) {
+              byId.set(s.id, s);
             } else {
-              const existing = byId.get(s.id);
-              // keep their current col if user moved them, otherwise force default Not Assigned
-              const nextCol = existing.col ? existing.col : "snhu_na";
-              byId.set(s.id, { ...existing, ...s, col: nextCol, locked: true });
+              byId.set(s.id, { ...existing, ...s, col: "snhu_na", locked: true }); // <- force Not Assigned
             }
           }
-          // rebuild list from map + any other cards
+
+          // also catch any duplicates by title (older saved copies) and force them to Not Assigned too
+          const lockedTitles = new Set(seed.map(x => x.title));
           const rebuilt = [];
-          const seedIds = new Set(seed.map(x => x.id));
+          const seenLockedId = new Set(seed.map(x => x.id));
+
+          // put the 4 official locked badges first
           for (const s of seed) rebuilt.push(byId.get(s.id) || s);
-          for (const c of parsed.university.cards) if (!seedIds.has(c.id)) rebuilt.push(c);
+
+          // then keep the rest, but if they match those titles, force to Not Assigned (so they are removed from Current/Upcoming)
+          for (const c of parsed.university.cards) {
+            if (seenLockedId.has(c.id)) continue;
+            if (lockedTitles.has(c.title)) {
+              rebuilt.push({ ...c, col: "snhu_na", locked: true });
+            } else {
+              rebuilt.push(c);
+            }
+          }
+
           parsed.university.cards = rebuilt;
 
           setState(parsed);
@@ -631,43 +637,36 @@
           e.preventDefault();
           const cardId = e.dataTransfer.getData("text/plain");
           if (!cardId) return;
-          updateCard(cardId, { col: bucketKey });
+
+          // If one of the 4 locked course badges is dragged, force it back to Not Assigned.
+          const forcedBucket = SNHU_LOCKED_IDS.has(cardId) ? "snhu_na" : bucketKey;
+          updateCard(cardId, { col: forcedBucket });
           setDragOverId(null);
         }
 
         const buckets = useMemo(() => {
-          const m = {
-            cur_pending: [],
-            cur_progress: [],
-            up_pending: [],
-            up_progress: [],
-            snhu_na: [],
-          };
+          const m = { cur_pending: [], cur_progress: [], up_pending: [], up_progress: [], snhu_na: [] };
           for (const c of data.cards || []) (m[c.col] || (m[c.col] = [])).push(c);
           return m;
         }, [data.cards]);
 
-        function renderCard(card) {
-          const isSeedLocked = !!card.locked; // the 4 badges are locked
-          return (
-            <div
-              key={card.id}
-              className="card"
-              draggable={!isLocked}
-              onDragStart={(e) => onDragStart(e, card.id)}
-              title={isLocked ? "Locked (view-only)" : "Drag to move"}
-            >
-              <div className="cardTop">
-                <div>
-                  <p className="courseTitle">{card.title}</p>
-                  <div className="termLine">{card.term}</div>
-                </div>
-                {/* ✅ Delete button removed for the 4 specified locked badges */}
-                <div style={{ width: 1 }} />
+        const renderCard = (card) => (
+          <div
+            key={card.id}
+            className="card"
+            draggable={!isLocked}
+            onDragStart={(e) => onDragStart(e, card.id)}
+            title={isLocked ? "Locked (view-only)" : "Drag to move"}
+          >
+            <div className="cardTop">
+              <div>
+                <p className="courseTitle">{card.title}</p>
+                <div className="termLine">{card.term}</div>
               </div>
+              <div style={{ width: 1 }} />
             </div>
-          );
-        }
+          </div>
+        );
 
         return (
           <div className="board" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
@@ -678,8 +677,7 @@
                   <span>
                     {col.sections
                       ? col.sections.reduce((sum, s) => sum + (buckets[s.key]?.length || 0), 0)
-                      : (buckets[col.dropKey]?.length || 0)
-                    }
+                      : (buckets[col.dropKey]?.length || 0)}
                   </span>
                 </div>
 
